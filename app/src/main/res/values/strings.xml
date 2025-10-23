@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Let’s do it</string>
+    <string name="nav_list">List</string>
+    <string name="nav_timeline">Timeline</string>
+    <string name="nav_buckets">Buckets</string>
+    <string name="nav_settings">Settings</string>
+    <string name="hint_quick_add">Add a task with natural language</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="label_clickup_token">ClickUp token</string>
+    <string name="label_openai_key">OpenAI key</string>
+    <string name="label_accent_pack">Accent pack</string>
+    <string name="label_palette">Palette family</string>
+    <string name="label_shape">Card shape</string>
+    <string name="label_due">Due</string>
+    <string name="message_empty_tasks">Nothing on your list yet</string>
+    <string name="action_add">Add</string>
+    <string name="label_theme">Theme</string>
+</resources>
