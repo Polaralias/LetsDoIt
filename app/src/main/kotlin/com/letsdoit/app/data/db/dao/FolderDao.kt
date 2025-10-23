@@ -1,0 +1,16 @@
+package com.letsdoit.app.data.db.dao
+
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Upsert
+import com.letsdoit.app.data.db.entities.FolderEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface FolderDao {
+    @Query("SELECT * FROM folders WHERE spaceId = :spaceId ORDER BY name")
+    fun observeFolders(spaceId: Long): Flow<List<FolderEntity>>
+
+    @Upsert
+    suspend fun upsert(folder: FolderEntity)
+}
