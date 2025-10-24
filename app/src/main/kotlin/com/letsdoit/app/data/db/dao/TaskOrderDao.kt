@@ -18,6 +18,9 @@ interface TaskOrderDao {
     @Query("SELECT * FROM task_order WHERE taskId = :taskId")
     suspend fun findForTask(taskId: Long): TaskOrderEntity?
 
+    @Query("SELECT MAX(orderInColumn) FROM task_order WHERE column = :column")
+    suspend fun maxOrderInColumn(column: String): Int?
+
     @Upsert
     suspend fun upsert(order: TaskOrderEntity)
 

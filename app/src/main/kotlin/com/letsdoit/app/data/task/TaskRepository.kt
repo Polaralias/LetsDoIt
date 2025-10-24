@@ -160,7 +160,7 @@ class TaskRepositoryImpl @Inject constructor(
                     val taskId = taskDao.upsert(entity)
                     createdIds[entry.index] = taskId
                     val orderInColumn = columnCounts.getOrPut(column) {
-                        taskOrderDao.listByColumn(column).size
+                        taskOrderDao.maxOrderInColumn(column)?.plus(1) ?: 0
                     }
                     val orderEntity = TaskOrderEntity(
                         taskId = taskId,
