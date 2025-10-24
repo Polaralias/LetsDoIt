@@ -4,6 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.letsdoit.app.ui.theme.PresetProvider
@@ -34,6 +36,16 @@ data class ViewPreferences(
     }
 }
 
+data class BulkPreferences(
+    val defaultListId: Long? = null,
+    val defaultDurationMinutes: Int = 60,
+    val rememberLastTokens: Boolean = false
+) {
+    companion object {
+        val Default = BulkPreferences()
+    }
+}
+
 @Singleton
 class PreferencesRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
@@ -46,6 +58,9 @@ class PreferencesRepository @Inject constructor(
     private val themePresetKey = stringPreferencesKey("view_theme_preset")
     private val themeCustomKey = stringPreferencesKey("view_theme_custom")
     private val showCompletedKey = booleanPreferencesKey("view_show_completed")
+    private val defaultListIdKey = longPreferencesKey("bulk_default_list_id")
+    private val bulkDurationKey = intPreferencesKey("bulk_default_duration")
+    private val rememberTokensKey = booleanPreferencesKey("bulk_remember_tokens")
 
     private val themeAdapter: JsonAdapter<ThemeConfig> = moshi.adapter(ThemeConfig::class.java)
 
@@ -67,6 +82,14 @@ class PreferencesRepository @Inject constructor(
 
     val theme: Flow<ThemeConfig> = viewPreferences.map { prefs ->
         prefs.themeCustom ?: presetProvider.find(prefs.themePreset)?.config ?: ThemeConfig.Default
+    }
+
+    val bulkPreferences: Flow<BulkPreferences> = dataStore.data.map { preferences ->
+        BulkPreferences(
+            defaultListId = preferences[defaultListIdKey],
+            defaultDurationMinutes = preferences[bulkDurationKey] ?: BulkPreferences.Default.defaultDurationMinutes,
+            rememberLastTokens = preferences[rememberTokensKey] ?: BulkPreferences.Default.rememberLastTokens
+        )
     }
 
     suspend fun updateListSort(sort: ListSort) {
@@ -110,6 +133,28 @@ class PreferencesRepository @Inject constructor(
     suspend fun updateShowCompleted(showCompleted: Boolean) {
         dataStore.edit { preferences ->
             preferences[showCompletedKey] = showCompleted
+        }
+    }
+
+    suspend fun updateDefaultListId(listId: Long?) {
+        dataStore.edit { preferences ->
+            if (listId == null) {
+                preferences.remove(defaultListIdKey)
+            } else {
+                preferences[defaultListIdKey] = listId
+            }
+        }
+    }
+
+    suspend fun updateBulkDefaultDuration(minutes: Int) {
+        dataStore.edit { preferences ->
+            preferences[bulkDurationKey] = minutes
+        }
+    }
+
+    suspend fun updateRememberBulkTokens(remember: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[rememberTokensKey] = remember
         }
     }
 

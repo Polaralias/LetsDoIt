@@ -20,4 +20,26 @@
     <string name="label_custom_theme">Custom theme</string>
     <string name="label_dynamic_colour">Dynamic colour</string>
     <string name="label_neutral_pack">Neutral</string>
+    <string name="bulk_title">Bulk add</string>
+    <string name="bulk_paste_clipboard">Paste from clipboard</string>
+    <string name="bulk_create_tasks">Create tasks</string>
+    <string name="bulk_create_n_tasks">Create %1$d tasks</string>
+    <string name="bulk_created_tasks">Created %1$d tasks</string>
+    <string name="bulk_undo">Undo</string>
+    <string name="bulk_import_csv">Import CSV</string>
+    <string name="bulk_line_error">Line %1$d has an error</string>
+    <string name="bulk_default_list">Default list</string>
+    <string name="bulk_priority_high">High</string>
+    <string name="bulk_priority_medium">Medium</string>
+    <string name="bulk_priority_low">Low</string>
+    <string name="bulk_priority_normal">Normal</string>
+    <string name="bulk_error_title_required">Title is required</string>
+    <string name="bulk_error_unknown_list">List not found</string>
+    <string name="bulk_error_unknown_bucket">Bucket not found</string>
+    <string name="bulk_warning_due_past">Due date is in the past</string>
+    <string name="bulk_remember_tokens">Remember last tokens</string>
+    <string name="bulk_csv_rows">%1$d rows ready</string>
+    <string name="bulk_clear">Clear</string>
+    <string name="bulk_empty_preview">Preview will appear here</string>
+    <string name="bulk_hint_multiline">Paste or type multiple tasks</string>
 </resources>

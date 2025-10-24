@@ -14,6 +14,9 @@ interface SpaceDao {
     @Query("SELECT * FROM spaces WHERE name = :name LIMIT 1")
     suspend fun findByName(name: String): SpaceEntity?
 
+    @Query("SELECT * FROM spaces ORDER BY name")
+    suspend fun listAll(): List<SpaceEntity>
+
     @Upsert
     suspend fun upsert(space: SpaceEntity)
 }
