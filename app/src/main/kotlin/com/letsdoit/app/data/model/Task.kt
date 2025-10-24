@@ -9,6 +9,7 @@ data class Task(
     val notes: String?,
     val dueAt: Instant?,
     val repeatRule: String?,
+    val remindOffsetMinutes: Int?,
     val createdAt: Instant,
     val updatedAt: Instant,
     val completed: Boolean,

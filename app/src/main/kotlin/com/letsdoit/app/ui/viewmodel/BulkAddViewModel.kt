@@ -25,7 +25,6 @@ import com.letsdoit.app.data.prefs.ViewPreferences
 import com.letsdoit.app.data.task.BulkCreateItem
 import com.letsdoit.app.data.task.LineIssue
 import com.letsdoit.app.data.task.TaskRepository
-import com.letsdoit.app.integrations.alarm.AlarmScheduler
 import com.letsdoit.app.integrations.calendar.CalendarBridge
 import com.letsdoit.app.nlp.NaturalLanguageParser
 import com.letsdoit.app.nlp.ParsedTask
@@ -53,7 +52,6 @@ class BulkAddViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val parser: NaturalLanguageParser,
     private val preferencesRepository: PreferencesRepository,
-    private val alarmScheduler: AlarmScheduler,
     private val calendarBridge: CalendarBridge,
     private val clock: Clock
 ) : ViewModel() {
@@ -144,24 +142,25 @@ class BulkAddViewModel @Inject constructor(
         viewModelScope.launch {
             val ctx = context.value
             val defaultListId = ctx.bulkPreferences.defaultListId ?: taskRepository.ensureDefaultList()
-            val items = parsed.validLines.map { line ->
-                val listId = line.listId ?: defaultListId
-                BulkCreateItem(
-                    listId = listId,
-                    title = line.base.title,
-                    notes = line.base.notes,
-                    dueAt = line.base.dueAt,
-                    repeatRule = line.base.repeatRule,
-                    priority = line.base.priority,
-                    column = line.base.column,
-                    startAt = line.base.startAt,
-                    durationMinutes = line.base.durationMinutes
-                )
+                val items = parsed.validLines.map { line ->
+                    val listId = line.listId ?: defaultListId
+                    BulkCreateItem(
+                        listId = listId,
+                        title = line.base.title,
+                        notes = line.base.notes,
+                        dueAt = line.base.dueAt,
+                        repeatRule = line.base.repeatRule,
+                        remindOffsetMinutes = line.base.remindOffsetMinutes,
+                        priority = line.base.priority,
+                        column = line.base.column,
+                        startAt = line.base.startAt,
+                        durationMinutes = line.base.durationMinutes
+                    )
             }
             if (items.isEmpty()) return@launch
             val result = taskRepository.bulkCreate(items)
             if (result.createdCount > 0) {
-                scheduleAlarms(items, result.createdIds)
+                recordCalendar(items, result.createdIds)
                 eventsFlow.tryEmit(BulkEvent.Created(result.createdCount))
                 lastCreatedIds.value = result.createdIds
                 if (mode.value == BulkMode.Text) {
@@ -179,7 +178,6 @@ class BulkAddViewModel @Inject constructor(
         viewModelScope.launch {
             ids.forEach { id ->
                 taskRepository.deleteTask(id)
-                alarmScheduler.cancel(id)
             }
             lastCreatedIds.value = emptyList()
             eventsFlow.tryEmit(BulkEvent.UndoComplete)
@@ -238,7 +236,8 @@ class BulkAddViewModel @Inject constructor(
         val merged = mergeParsedTask(
             parsedTitle = parsed.title,
             dueAt = parsed.dueAt,
-            repeatExpression = parsed.repeat?.expression,
+            repeatExpression = parsed.repeatRule,
+            remindOffsetMinutes = parsed.remindOffsetMinutes,
             tokenPriority = tokens.priority,
             preferences = ctx.bulkPreferences,
             viewPreferences = ctx.viewPreferences,
@@ -278,6 +277,7 @@ class BulkAddViewModel @Inject constructor(
                     notes = null,
                     dueAt = merged.dueAt,
                     repeatRule = merged.repeatRule,
+                    remindOffsetMinutes = merged.remindOffsetMinutes,
                     priority = merged.priority,
                     column = columnResolution.value,
                     startAt = merged.startAt,
@@ -338,6 +338,7 @@ class BulkAddViewModel @Inject constructor(
                     notes = row.notes,
                     dueAt = row.dueAt,
                     repeatRule = null,
+                    remindOffsetMinutes = null,
                     priority = mergedPriority,
                     column = columnResolution.value,
                     startAt = startAt.first,
@@ -347,12 +348,11 @@ class BulkAddViewModel @Inject constructor(
         }
     }
 
-    private fun scheduleAlarms(items: List<BulkCreateItem>, ids: List<Long>) {
+    private fun recordCalendar(items: List<BulkCreateItem>, ids: List<Long>) {
         val now = Instant.now(clock)
-        items.zip(ids).forEach { (item, id) ->
+        items.zip(ids).forEach { (item, _) ->
             item.dueAt?.let { due ->
                 if (due.isAfter(now)) {
-                    alarmScheduler.schedule(id, due, item.title)
                     calendarBridge.insertEvent(item.title, due)
                 }
             }
@@ -480,6 +480,7 @@ data class ParsedBase(
     val notes: String?,
     val dueAt: Instant?,
     val repeatRule: String?,
+    val remindOffsetMinutes: Int?,
     val priority: Int,
     val column: String?,
     val startAt: Instant?,

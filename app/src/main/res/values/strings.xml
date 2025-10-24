@@ -42,4 +42,25 @@
     <string name="bulk_clear">Clear</string>
     <string name="bulk_empty_preview">Preview will appear here</string>
     <string name="bulk_hint_multiline">Paste or type multiple tasks</string>
+    <string name="label_recurrence">Recurrence</string>
+    <string name="label_no_recurrence">No recurrence</string>
+    <string name="label_reminders">Reminders</string>
+    <string name="reminder_none">None</string>
+    <string name="reminder_at_time">At due time</string>
+    <string name="reminder_minutes_before">%1$d minutes before</string>
+    <string name="reminder_custom">Custom minutes</string>
+    <string name="hint_minutes">Minutes</string>
+    <string name="label_custom_frequency">Frequency</string>
+    <string name="label_custom_interval">Interval</string>
+    <string name="label_custom_byday">BYDAY</string>
+    <string name="label_custom_bymonthday">BYMONTHDAY</string>
+    <string name="label_custom_bymonth">BYMONTH</string>
+    <string name="label_custom_count">COUNT</string>
+    <string name="label_custom_until">Until (yyyy-MM-dd HH:mm)</string>
+    <string name="preset_custom">Custom</string>
+    <string name="action_clear_recurrence">Clear recurrence</string>
+    <string name="accessibility_repeating_task">Repeating task</string>
+    <string name="label_next_due">Next due %1$s</string>
+    <string name="message_invalid_custom_reminder">Enter a valid number of minutes</string>
+    <string name="action_close">Close</string>
 </resources>

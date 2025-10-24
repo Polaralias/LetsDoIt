@@ -23,6 +23,7 @@ data class MergedTaskResult(
     val title: String,
     val dueAt: Instant?,
     val repeatRule: String?,
+    val remindOffsetMinutes: Int?,
     val priority: Int,
     val startAt: Instant?,
     val durationMinutes: Int?
@@ -77,6 +78,7 @@ fun mergeParsedTask(
     parsedTitle: String,
     dueAt: Instant?,
     repeatExpression: String?,
+    remindOffsetMinutes: Int?,
     tokenPriority: Int?,
     preferences: BulkPreferences,
     viewPreferences: ViewPreferences,
@@ -89,6 +91,7 @@ fun mergeParsedTask(
         title = title,
         dueAt = dueAt,
         repeatRule = repeatExpression,
+        remindOffsetMinutes = remindOffsetMinutes,
         priority = priority,
         startAt = timeline.first,
         durationMinutes = timeline.second
