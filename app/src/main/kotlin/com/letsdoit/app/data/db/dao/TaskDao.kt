@@ -24,6 +24,12 @@ interface TaskDao {
     @Upsert
     suspend fun upsert(task: TaskEntity): Long
 
+    @Query("SELECT MAX(orderInList) FROM tasks WHERE listId = :listId")
+    suspend fun maxOrderInList(listId: Long): Int?
+
+    @Query("SELECT * FROM tasks WHERE listId = :listId ORDER BY orderInList")
+    suspend fun listByOrder(listId: Long): List<TaskEntity>
+
     @Query("UPDATE tasks SET completed = :completed, updatedAt = :updatedAt WHERE id = :taskId")
     suspend fun updateCompletion(taskId: Long, completed: Boolean, updatedAt: Instant)
 

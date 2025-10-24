@@ -1,5 +1,7 @@
 package com.letsdoit.app.data.task
 
+import androidx.room.withTransaction
+import com.letsdoit.app.data.db.AppDatabase
 import com.letsdoit.app.data.db.dao.ListDao
 import com.letsdoit.app.data.db.dao.SpaceDao
 import com.letsdoit.app.data.db.dao.TaskDao
@@ -20,8 +22,14 @@ interface TaskRepository {
     fun observeTasks(): Flow<List<Task>>
     fun observeTimeline(): Flow<List<Task>>
     fun observeLists(): Flow<List<ListEntity>>
+    fun observeSpaces(): Flow<List<SpaceEntity>>
+    suspend fun listLists(): List<ListEntity>
+    suspend fun listSpaces(): List<SpaceEntity>
     suspend fun ensureDefaultList(): Long
+    suspend fun resolveListByName(name: String): ListEntity?
+    suspend fun resolveListBySpace(spaceName: String, listName: String): ListEntity?
     suspend fun addTask(task: NewTask): Long
+    suspend fun bulkCreate(items: List<BulkCreateItem>): BulkCreateResult
     suspend fun updateTask(task: Task)
     suspend fun updateCompletion(taskId: Long, completed: Boolean)
     suspend fun deleteTask(taskId: Long)
@@ -40,8 +48,29 @@ data class NewTask(
     val repeatRule: String? = null
 )
 
+data class BulkCreateItem(
+    val listId: Long,
+    val title: String,
+    val notes: String? = null,
+    val dueAt: Instant? = null,
+    val repeatRule: String? = null,
+    val priority: Int = 2,
+    val column: String? = null,
+    val startAt: Instant? = null,
+    val durationMinutes: Int? = null
+)
+
+data class LineIssue(val lineIndex: Int, val message: String)
+
+data class BulkCreateResult(
+    val createdCount: Int,
+    val issues: List<LineIssue>,
+    val createdIds: List<Long>
+)
+
 @Singleton
 class TaskRepositoryImpl @Inject constructor(
+    private val database: AppDatabase,
     private val taskDao: TaskDao,
     private val taskOrderDao: TaskOrderDao,
     private val listDao: ListDao,
@@ -61,6 +90,12 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override fun observeLists(): Flow<List<ListEntity>> = listDao.observeAll()
+
+    override fun observeSpaces(): Flow<List<SpaceEntity>> = spaceDao.observeSpaces()
+
+    override suspend fun listLists(): List<ListEntity> = listDao.listAll()
+
+    override suspend fun listSpaces(): List<SpaceEntity> = spaceDao.listAll()
 
     override suspend fun ensureDefaultList(): Long {
         val existing = listDao.findByName(defaultListName)
@@ -91,6 +126,78 @@ class TaskRepositoryImpl @Inject constructor(
             column = defaultColumn
         )
         return taskDao.upsert(entity)
+    }
+
+    override suspend fun bulkCreate(items: List<BulkCreateItem>): BulkCreateResult {
+        if (items.isEmpty()) {
+            return BulkCreateResult(createdCount = 0, issues = emptyList(), createdIds = emptyList())
+        }
+        val indexedItems = items.withIndex()
+        val createdIds = MutableList<Long?>(items.size) { null }
+        database.withTransaction {
+            val grouped = indexedItems.groupBy { it.value.listId }
+            val columnCounts = mutableMapOf<String, Int>()
+            grouped.forEach { (listId, entries) ->
+                var orderIndex = taskDao.maxOrderInList(listId)?.plus(1) ?: 0
+                entries.forEach { entry ->
+                    val item = entry.value
+                    val now = Instant.now(clock)
+                    val column = item.column ?: defaultColumn
+                    val entity = TaskEntity(
+                        listId = listId,
+                        title = item.title,
+                        notes = item.notes,
+                        dueAt = item.dueAt,
+                        repeatRule = item.repeatRule,
+                        createdAt = now,
+                        updatedAt = now,
+                        priority = item.priority,
+                        orderInList = orderIndex,
+                        startAt = item.startAt?.toEpochMilli(),
+                        durationMinutes = item.durationMinutes,
+                        column = column
+                    )
+                    val taskId = taskDao.upsert(entity)
+                    createdIds[entry.index] = taskId
+                    val orderInColumn = columnCounts.getOrPut(column) {
+                        taskOrderDao.listByColumn(column).size
+                    }
+                    val orderEntity = TaskOrderEntity(
+                        taskId = taskId,
+                        column = column,
+                        orderInColumn = orderInColumn
+                    )
+                    taskOrderDao.upsert(orderEntity)
+                    columnCounts[column] = orderInColumn + 1
+                    orderIndex += 1
+                }
+            }
+        }
+        val created = createdIds.mapNotNull { it }
+        return BulkCreateResult(createdCount = created.size, issues = emptyList(), createdIds = created)
+    }
+
+    override suspend fun resolveListByName(name: String): ListEntity? {
+        val lower = name.lowercase()
+        val all = listDao.listAll()
+        val exact = all.firstOrNull { it.name.equals(name, ignoreCase = false) }
+        if (exact != null) return exact
+        val caseInsensitive = all.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        if (caseInsensitive != null) return caseInsensitive
+        return all.firstOrNull { it.name.lowercase().startsWith(lower) }
+    }
+
+    override suspend fun resolveListBySpace(spaceName: String, listName: String): ListEntity? {
+        val spaces = spaceDao.listAll()
+        val targetSpace = spaces.firstOrNull { it.name.equals(spaceName, ignoreCase = true) }
+            ?: spaces.firstOrNull { it.name.lowercase().startsWith(spaceName.lowercase()) }
+            ?: return null
+        val lists = listDao.listAll().filter { it.spaceId == targetSpace.id }
+        val exact = lists.firstOrNull { it.name == listName }
+        if (exact != null) return exact
+        val caseInsensitive = lists.firstOrNull { it.name.equals(listName, ignoreCase = true) }
+        if (caseInsensitive != null) return caseInsensitive
+        return lists.firstOrNull { it.name.lowercase().startsWith(listName.lowercase()) }
     }
 
     override suspend fun updateTask(task: Task) {

@@ -23,6 +23,9 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE name = :name LIMIT 1")
     suspend fun findByName(name: String): ListEntity?
 
+    @Query("SELECT * FROM lists ORDER BY name")
+    suspend fun listAll(): List<ListEntity>
+
     @Upsert
     suspend fun upsert(list: ListEntity)
 }

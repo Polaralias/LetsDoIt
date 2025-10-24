@@ -13,6 +13,8 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.AutoAwesomeMosaic
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +28,7 @@ import com.letsdoit.app.ui.components.AppBottomBar
 import com.letsdoit.app.ui.components.AppDestination
 import com.letsdoit.app.ui.components.AppTopBar
 import com.letsdoit.app.ui.screens.BucketsScreen
+import com.letsdoit.app.ui.screens.BulkAddScreen
 import com.letsdoit.app.ui.screens.SettingsScreen
 import com.letsdoit.app.ui.screens.TasksListScreen
 import com.letsdoit.app.ui.screens.TimelineScreen
@@ -54,7 +57,22 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
-                        AppTopBar(title = stringResource(id = R.string.app_name))
+                        val title = when (currentRoute) {
+                            Destinations.BulkAdd.route -> stringResource(id = R.string.bulk_title)
+                            else -> stringResource(id = R.string.app_name)
+                        }
+                        AppTopBar(
+                            title = title,
+                            actions = {
+                                if (currentRoute == Destinations.List.route || currentRoute == Destinations.Buckets.route) {
+                                    TextButton(onClick = {
+                                        navController.navigate(Destinations.BulkAdd.route)
+                                    }) {
+                                        Text(text = stringResource(id = R.string.bulk_title))
+                                    }
+                                }
+                            }
+                        )
                     },
                     bottomBar = {
                         AppBottomBar(
@@ -100,6 +118,9 @@ private fun AppNavGraph(padding: PaddingValues, navController: androidx.navigati
         composable(Destinations.Settings.route) {
             SettingsScreen()
         }
+        composable(Destinations.BulkAdd.route) {
+            BulkAddScreen()
+        }
     }
 }
 
@@ -108,6 +129,7 @@ sealed class Destinations(val route: String) {
     data object Timeline : Destinations("timeline")
     data object Buckets : Destinations("buckets")
     data object Settings : Destinations("settings")
+    data object BulkAdd : Destinations("bulkAdd")
 
     companion object {
         val all = listOf(List, Timeline, Buckets, Settings)
