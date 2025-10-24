@@ -46,6 +46,7 @@ class BulkResolversTest {
             parsedTitle = "Long task name that should be trimmed",
             dueAt = dueAt,
             repeatExpression = null,
+            remindOffsetMinutes = null,
             tokenPriority = 3,
             preferences = BulkPreferences.Default,
             viewPreferences = ViewPreferences.Default,
