@@ -11,5 +11,11 @@ data class Task(
     val repeatRule: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val completed: Boolean
+    val completed: Boolean,
+    val priority: Int,
+    val orderInList: Int,
+    val startAt: Instant?,
+    val durationMinutes: Int?,
+    val calendarEventId: Long?,
+    val column: String
 )

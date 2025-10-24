@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.room.Room
 import com.letsdoit.app.data.db.AppDatabase
 import com.letsdoit.app.data.db.dao.FolderDao
+import com.letsdoit.app.data.db.MIGRATION_1_2
 import com.letsdoit.app.data.db.dao.ListDao
 import com.letsdoit.app.data.db.dao.SpaceDao
 import com.letsdoit.app.data.db.dao.TaskDao
+import com.letsdoit.app.data.db.dao.TaskOrderDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,7 +22,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(context, AppDatabase::class.java, "letsdoit.db").build()
+        return Room.databaseBuilder(context, AppDatabase::class.java, "letsdoit.db")
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     @Provides
@@ -34,4 +38,7 @@ object DatabaseModule {
 
     @Provides
     fun provideTaskDao(database: AppDatabase): TaskDao = database.taskDao()
+
+    @Provides
+    fun provideTaskOrderDao(database: AppDatabase): TaskOrderDao = database.taskOrderDao()
 }

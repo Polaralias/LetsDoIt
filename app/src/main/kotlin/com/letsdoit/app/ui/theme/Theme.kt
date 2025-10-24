@@ -1,5 +1,6 @@
 package com.letsdoit.app.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,125 +9,120 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-
-enum class CardShapeFamily {
-    Rounded,
-    Cut,
-    Pill
-}
-
-enum class PaletteFamily {
-    Calm,
-    Vibrant,
-    Night
-}
-
-enum class AccentPack {
-    Fresh,
-    Citrus,
-    Blossom
-}
-
-@Immutable
-data class ThemeConfig(
-    val paletteFamily: PaletteFamily,
-    val accentPack: AccentPack,
-    val cardShapeFamily: CardShapeFamily
-) {
-    companion object {
-        val Default = ThemeConfig(PaletteFamily.Calm, AccentPack.Fresh, CardShapeFamily.Rounded)
-    }
-}
-
-@Immutable
-data class ThemePreset(val name: String, val config: ThemeConfig)
-
-val ThemePresets = listOf(
-    ThemePreset("Fresh morning", ThemeConfig(PaletteFamily.Calm, AccentPack.Fresh, CardShapeFamily.Rounded)),
-    ThemePreset("Citrus punch", ThemeConfig(PaletteFamily.Vibrant, AccentPack.Citrus, CardShapeFamily.Cut)),
-    ThemePreset("Blossom dusk", ThemeConfig(PaletteFamily.Night, AccentPack.Blossom, CardShapeFamily.Pill))
-)
 
 val LocalThemeConfig = staticCompositionLocalOf { ThemeConfig.Default }
 
 @Composable
 fun AppTheme(config: ThemeConfig = ThemeConfig.Default, content: @Composable () -> Unit) {
-    val colors = rememberColorScheme(config)
-    val shapes = rememberShapes(config.cardShapeFamily)
-    MaterialTheme(
-        colorScheme = colors,
-        shapes = shapes,
-        typography = Typography(),
-        content = content
-    )
+    val colorScheme = rememberColorScheme(config)
+    val shapes = rememberShapes(config.cardFamily)
+    CompositionLocalProvider(LocalThemeConfig provides config) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            shapes = shapes,
+            typography = Typography(),
+            content = content
+        )
+    }
 }
 
 @Composable
 private fun rememberColorScheme(config: ThemeConfig): ColorScheme {
+    val context = LocalContext.current
+    if (config.dynamicColour && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        return if (config.paletteFamily == PaletteFamily.Dark || config.paletteFamily == PaletteFamily.Moody) {
+            dynamicDarkColorScheme(context)
+        } else {
+            dynamicLightColorScheme(context)
+        }
+    }
     val palette = when (config.paletteFamily) {
-        PaletteFamily.Calm -> PaletteColors(
-            background = Color(0xFFF1FAEE),
+        PaletteFamily.Dark -> Palette(
+            primary = Color(0xFF8D99AE),
+            primaryVariant = Color(0xFF2B2D42),
+            secondary = Color(0xFFEDF2F4),
+            surface = Color(0xFF1B1D2A),
+            background = Color(0xFF14161F),
+            onSurface = Color(0xFFE5E9F0)
+        )
+        PaletteFamily.Moody -> Palette(
+            primary = Color(0xFF7F5AF0),
+            primaryVariant = Color(0xFF2CB1BC),
+            secondary = Color(0xFFEF4565),
+            surface = Color(0xFF16161A),
+            background = Color(0xFF0F0F13),
+            onSurface = Color(0xFFE4E5F1)
+        )
+        PaletteFamily.Pastel -> Palette(
+            primary = Color(0xFFA3C4F3),
+            primaryVariant = Color(0xFFF6D6AD),
+            secondary = Color(0xFFE6B8A2),
+            surface = Color(0xFFFFFBF0),
+            background = Color(0xFFFFF5EC),
+            onSurface = Color(0xFF413C58)
+        )
+        PaletteFamily.Soft -> Palette(
+            primary = Color(0xFFB8E1DD),
+            primaryVariant = Color(0xFFEEC4C4),
+            secondary = Color(0xFF6F5E76),
             surface = Color(0xFFFFFFFF),
-            onSurface = Color(0xFF1D3557)
-        )
-        PaletteFamily.Vibrant -> PaletteColors(
-            background = Color(0xFFFFFBEB),
-            surface = Color(0xFFFFF3C4),
-            onSurface = Color(0xFF3F1D38)
-        )
-        PaletteFamily.Night -> PaletteColors(
-            background = Color(0xFF101820),
-            surface = Color(0xFF15232F),
-            onSurface = Color(0xFFECEFF4)
+            background = Color(0xFFF5F5F5),
+            onSurface = Color(0xFF2D2A32)
         )
     }
-    val accent = when (config.accentPack) {
-        AccentPack.Fresh -> AccentColors(Color(0xFF0FA3B1), Color(0xFF2E5077))
-        AccentPack.Citrus -> AccentColors(Color(0xFFF4A259), Color(0xFFD1495B))
-        AccentPack.Blossom -> AccentColors(Color(0xFFD26AC2), Color(0xFF6B2C91))
-    }
-    return if (config.paletteFamily == PaletteFamily.Night) {
+    return if (config.paletteFamily == PaletteFamily.Dark || config.paletteFamily == PaletteFamily.Moody) {
         darkColorScheme(
-            primary = accent.primary,
+            primary = palette.primary,
             onPrimary = Color.White,
-            secondary = accent.secondary,
+            secondary = palette.secondary,
             onSecondary = Color.White,
             background = palette.background,
             surface = palette.surface,
             onSurface = palette.onSurface,
             onBackground = palette.onSurface,
-            tertiary = accent.secondary
+            tertiary = palette.primaryVariant
         )
     } else {
         lightColorScheme(
-            primary = accent.primary,
-            onPrimary = Color.White,
-            secondary = accent.secondary,
-            onSecondary = Color.White,
+            primary = palette.primary,
+            onPrimary = Color(0xFF1C1C1C),
+            secondary = palette.secondary,
+            onSecondary = Color(0xFF1C1C1C),
             background = palette.background,
             surface = palette.surface,
             onSurface = palette.onSurface,
             onBackground = palette.onSurface,
-            tertiary = accent.secondary
+            tertiary = palette.primaryVariant
         )
     }
 }
 
-private fun rememberShapes(cardShapeFamily: CardShapeFamily): Shapes {
-    val shape: CornerBasedShape = when (cardShapeFamily) {
-        CardShapeFamily.Rounded -> RoundedCornerShape(16.dp)
-        CardShapeFamily.Cut -> CutCornerShape(12.dp)
-        CardShapeFamily.Pill -> RoundedCornerShape(28.dp)
+private fun rememberShapes(cardFamily: CardFamily): Shapes {
+    val shape: CornerBasedShape = when (cardFamily) {
+        CardFamily.Cloud -> RoundedCornerShape(28.dp)
+        CardFamily.Square -> RoundedCornerShape(4.dp)
+        CardFamily.Sharp -> CutCornerShape(12.dp)
+        CardFamily.Rounded -> RoundedCornerShape(16.dp)
+    }
+    val smallShape: CornerBasedShape = when (cardFamily) {
+        CardFamily.Cloud -> RoundedCornerShape(20.dp)
+        CardFamily.Square -> RoundedCornerShape(4.dp)
+        CardFamily.Sharp -> CutCornerShape(8.dp)
+        CardFamily.Rounded -> RoundedCornerShape(12.dp)
     }
     return Shapes(
-        extraSmall = shape,
-        small = shape,
+        extraSmall = smallShape,
+        small = smallShape,
         medium = shape,
         large = shape,
         extraLarge = shape
@@ -134,14 +130,11 @@ private fun rememberShapes(cardShapeFamily: CardShapeFamily): Shapes {
 }
 
 @Immutable
-private data class PaletteColors(
-    val background: Color,
-    val surface: Color,
-    val onSurface: Color
-)
-
-@Immutable
-private data class AccentColors(
+private data class Palette(
     val primary: Color,
-    val secondary: Color
+    val primaryVariant: Color,
+    val secondary: Color,
+    val surface: Color,
+    val background: Color,
+    val onSurface: Color
 )
