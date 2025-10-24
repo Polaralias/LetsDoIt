@@ -2,6 +2,7 @@ package com.letsdoit.app.di
 
 import com.letsdoit.app.network.ClickUpService
 import com.letsdoit.app.security.SecurePrefs
+import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -54,4 +55,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideClickUpService(retrofit: Retrofit): ClickUpService = retrofit.create(ClickUpService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideMoshi(): Moshi = Moshi.Builder().build()
 }

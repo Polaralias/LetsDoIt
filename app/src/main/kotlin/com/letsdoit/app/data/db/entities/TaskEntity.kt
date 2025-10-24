@@ -27,5 +27,11 @@ data class TaskEntity(
     val repeatRule: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val completed: Boolean = false
+    val completed: Boolean = false,
+    val priority: Int = 2,
+    val orderInList: Int = 0,
+    val startAt: Long? = null,
+    val durationMinutes: Int? = null,
+    val calendarEventId: Long? = null,
+    val column: String = "To do"
 )

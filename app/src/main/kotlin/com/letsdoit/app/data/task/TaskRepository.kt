@@ -3,9 +3,11 @@ package com.letsdoit.app.data.task
 import com.letsdoit.app.data.db.dao.ListDao
 import com.letsdoit.app.data.db.dao.SpaceDao
 import com.letsdoit.app.data.db.dao.TaskDao
+import com.letsdoit.app.data.db.dao.TaskOrderDao
 import com.letsdoit.app.data.db.entities.ListEntity
 import com.letsdoit.app.data.db.entities.SpaceEntity
 import com.letsdoit.app.data.db.entities.TaskEntity
+import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.model.Task
 import java.time.Clock
 import java.time.Instant
@@ -24,6 +26,10 @@ interface TaskRepository {
     suspend fun updateCompletion(taskId: Long, completed: Boolean)
     suspend fun deleteTask(taskId: Long)
     suspend fun getTask(taskId: Long): Task?
+    suspend fun reorderList(ids: List<Long>)
+    suspend fun moveTaskToColumn(taskId: Long, column: String, toIndex: Int)
+    suspend fun setTimeline(taskId: Long, startAt: Long?, durationMinutes: Int?)
+    suspend fun setPriority(taskId: Long, priority: Int)
 }
 
 data class NewTask(
@@ -37,12 +43,14 @@ data class NewTask(
 @Singleton
 class TaskRepositoryImpl @Inject constructor(
     private val taskDao: TaskDao,
+    private val taskOrderDao: TaskOrderDao,
     private val listDao: ListDao,
     private val spaceDao: SpaceDao,
     private val clock: Clock
 ) : TaskRepository {
     private val defaultListName = "Inbox"
     private val defaultSpaceName = "Everywhere"
+    private val defaultColumn = "To do"
 
     override fun observeTasks(): Flow<List<Task>> = taskDao.observeAll().map { list ->
         list.map { it.toModel() }
@@ -74,7 +82,13 @@ class TaskRepositoryImpl @Inject constructor(
             dueAt = task.dueAt,
             repeatRule = task.repeatRule,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            priority = 2,
+            orderInList = 0,
+            startAt = null,
+            durationMinutes = null,
+            calendarEventId = null,
+            column = defaultColumn
         )
         return taskDao.upsert(entity)
     }
@@ -89,7 +103,13 @@ class TaskRepositoryImpl @Inject constructor(
             repeatRule = task.repeatRule,
             createdAt = task.createdAt,
             updatedAt = Instant.now(clock),
-            completed = task.completed
+            completed = task.completed,
+            priority = task.priority,
+            orderInList = task.orderInList,
+            startAt = task.startAt?.toEpochMilli(),
+            durationMinutes = task.durationMinutes,
+            calendarEventId = task.calendarEventId,
+            column = task.column
         )
         taskDao.upsert(entity)
     }
@@ -100,10 +120,44 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun deleteTask(taskId: Long) {
         taskDao.delete(taskId)
+        taskOrderDao.deleteForTask(taskId)
     }
 
     override suspend fun getTask(taskId: Long): Task? {
         return taskDao.getById(taskId)?.toModel()
+    }
+
+    override suspend fun reorderList(ids: List<Long>) {
+        val now = Instant.now(clock)
+        ids.forEachIndexed { index, id ->
+            taskDao.updateOrderInList(id, index, now)
+        }
+    }
+
+    override suspend fun moveTaskToColumn(taskId: Long, column: String, toIndex: Int) {
+        val now = Instant.now(clock)
+        val existing = taskOrderDao.findForTask(taskId)
+        existing?.let {
+            taskOrderDao.deleteForTask(taskId)
+            val sourceOrders = taskOrderDao.listByColumn(it.column)
+            taskOrderDao.rewrite(it.column, sourceOrders)
+        } ?: taskOrderDao.deleteForTask(taskId)
+        val targetOrders = taskOrderDao.listByColumn(column).filterNot { it.taskId == taskId }.toMutableList()
+        val index = toIndex.coerceIn(0, targetOrders.size)
+        val entry = TaskOrderEntity(id = existing?.id ?: 0, taskId = taskId, column = column, orderInColumn = index)
+        targetOrders.add(index, entry)
+        taskOrderDao.rewrite(column, targetOrders)
+        taskDao.updateColumn(taskId, column, now)
+    }
+
+    override suspend fun setTimeline(taskId: Long, startAt: Long?, durationMinutes: Int?) {
+        val now = Instant.now(clock)
+        taskDao.updateTimeline(taskId, startAt, durationMinutes, now)
+    }
+
+    override suspend fun setPriority(taskId: Long, priority: Int) {
+        val now = Instant.now(clock)
+        taskDao.updatePriority(taskId, priority, now)
     }
 
     private fun TaskEntity.toModel(): Task = Task(
@@ -115,7 +169,13 @@ class TaskRepositoryImpl @Inject constructor(
         repeatRule = repeatRule,
         createdAt = createdAt,
         updatedAt = updatedAt,
-        completed = completed
+        completed = completed,
+        priority = priority,
+        orderInList = orderInList,
+        startAt = startAt?.let { Instant.ofEpochMilli(it) },
+        durationMinutes = durationMinutes,
+        calendarEventId = calendarEventId,
+        column = column
     )
 
     private suspend fun ensureDefaultSpace(): SpaceEntity {

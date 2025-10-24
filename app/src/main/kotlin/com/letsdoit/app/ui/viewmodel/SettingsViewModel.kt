@@ -3,10 +3,13 @@ package com.letsdoit.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.letsdoit.app.data.prefs.PreferencesRepository
+import com.letsdoit.app.data.prefs.ViewPreferences
 import com.letsdoit.app.security.SecurePrefs
-import com.letsdoit.app.ui.theme.AccentPack
-import com.letsdoit.app.ui.theme.CardShapeFamily
+import com.letsdoit.app.ui.theme.AccentManager
+import com.letsdoit.app.ui.theme.AccentPackDescriptor
+import com.letsdoit.app.ui.theme.CardFamily
 import com.letsdoit.app.ui.theme.PaletteFamily
+import com.letsdoit.app.ui.theme.PresetProvider
 import com.letsdoit.app.ui.theme.ThemeConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -20,7 +23,9 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val securePrefs: SecurePrefs,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val presetProvider: PresetProvider,
+    private val accentManager: AccentManager
 ) : ViewModel() {
     private val _clickUpToken = MutableStateFlow(securePrefs.read("clickup_token") ?: "")
     val clickUpToken: StateFlow<String> = _clickUpToken.asStateFlow()
@@ -28,8 +33,22 @@ class SettingsViewModel @Inject constructor(
     private val _openAiKey = MutableStateFlow(securePrefs.read("openai_key") ?: "")
     val openAiKey: StateFlow<String> = _openAiKey.asStateFlow()
 
-    val theme: StateFlow<ThemeConfig> = preferencesRepository.themeConfig
+    val preferences: StateFlow<ViewPreferences> = preferencesRepository.viewPreferences
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ViewPreferences.Default)
+
+    val theme: StateFlow<ThemeConfig> = preferencesRepository.theme
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeConfig.Default)
+
+    private val _accentPacks = MutableStateFlow<List<AccentPackDescriptor>>(emptyList())
+    val accentPacks: StateFlow<List<AccentPackDescriptor>> = _accentPacks.asStateFlow()
+
+    val presets = presetProvider.presets()
+
+    init {
+        viewModelScope.launch {
+            _accentPacks.value = accentManager.availablePacks()
+        }
+    }
 
     fun onClickUpTokenChanged(value: String) {
         _clickUpToken.value = value
@@ -47,21 +66,34 @@ class SettingsViewModel @Inject constructor(
         securePrefs.write("openai_key", _openAiKey.value.trim())
     }
 
-    fun updatePalette(paletteFamily: PaletteFamily) {
-        updateTheme(theme.value.copy(paletteFamily = paletteFamily))
-    }
-
-    fun updateAccent(accentPack: AccentPack) {
-        updateTheme(theme.value.copy(accentPack = accentPack))
-    }
-
-    fun updateShape(cardShapeFamily: CardShapeFamily) {
-        updateTheme(theme.value.copy(cardShapeFamily = cardShapeFamily))
-    }
-
-    private fun updateTheme(config: ThemeConfig) {
+    fun selectPreset(key: String) {
         viewModelScope.launch {
-            preferencesRepository.updateTheme(config)
+            preferencesRepository.updateThemePreset(key)
+            preferencesRepository.updateThemeCustom(null)
+        }
+    }
+
+    fun setCardFamily(cardFamily: CardFamily) {
+        updateCustomTheme { it.copy(cardFamily = cardFamily) }
+    }
+
+    fun setPaletteFamily(paletteFamily: PaletteFamily) {
+        updateCustomTheme { it.copy(paletteFamily = paletteFamily) }
+    }
+
+    fun setAccentPack(packId: String?) {
+        updateCustomTheme { it.copy(accentPackId = packId) }
+    }
+
+    fun setDynamicColour(enabled: Boolean) {
+        updateCustomTheme { it.copy(dynamicColour = enabled) }
+    }
+
+    private fun updateCustomTheme(transform: (ThemeConfig) -> ThemeConfig) {
+        val base = transform(theme.value)
+        viewModelScope.launch {
+            preferencesRepository.updateThemeCustom(base)
+            preferencesRepository.updateThemePreset(null)
         }
     }
 }
