@@ -11,6 +11,7 @@ import com.letsdoit.app.data.db.entities.SpaceEntity
 import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.model.Task
+import com.letsdoit.app.reminders.ReminderCoordinator
 import java.time.Clock
 import java.time.Instant
 import javax.inject.Inject
@@ -45,7 +46,8 @@ data class NewTask(
     val title: String,
     val notes: String? = null,
     val dueAt: Instant? = null,
-    val repeatRule: String? = null
+    val repeatRule: String? = null,
+    val remindOffsetMinutes: Int? = null
 )
 
 data class BulkCreateItem(
@@ -54,6 +56,7 @@ data class BulkCreateItem(
     val notes: String? = null,
     val dueAt: Instant? = null,
     val repeatRule: String? = null,
+    val remindOffsetMinutes: Int? = null,
     val priority: Int = 2,
     val column: String? = null,
     val startAt: Instant? = null,
@@ -75,7 +78,8 @@ class TaskRepositoryImpl @Inject constructor(
     private val taskOrderDao: TaskOrderDao,
     private val listDao: ListDao,
     private val spaceDao: SpaceDao,
-    private val clock: Clock
+    private val clock: Clock,
+    private val reminderCoordinator: ReminderCoordinator
 ) : TaskRepository {
     private val defaultListName = "Inbox"
     private val defaultSpaceName = "Everywhere"
@@ -116,6 +120,7 @@ class TaskRepositoryImpl @Inject constructor(
             notes = task.notes,
             dueAt = task.dueAt,
             repeatRule = task.repeatRule,
+            remindOffsetMinutes = task.remindOffsetMinutes,
             createdAt = now,
             updatedAt = now,
             priority = 2,
@@ -125,7 +130,9 @@ class TaskRepositoryImpl @Inject constructor(
             calendarEventId = null,
             column = defaultColumn
         )
-        return taskDao.upsert(entity)
+        val taskId = taskDao.upsert(entity)
+        reminderCoordinator.onTaskSaved(taskId)
+        return taskId
     }
 
     override suspend fun bulkCreate(items: List<BulkCreateItem>): BulkCreateResult {
@@ -149,6 +156,7 @@ class TaskRepositoryImpl @Inject constructor(
                         notes = item.notes,
                         dueAt = item.dueAt,
                         repeatRule = item.repeatRule,
+                        remindOffsetMinutes = item.remindOffsetMinutes,
                         createdAt = now,
                         updatedAt = now,
                         priority = item.priority,
@@ -174,6 +182,9 @@ class TaskRepositoryImpl @Inject constructor(
             }
         }
         val created = createdIds.mapNotNull { it }
+        created.forEach { id ->
+            reminderCoordinator.onTaskSaved(id)
+        }
         return BulkCreateResult(createdCount = created.size, issues = emptyList(), createdIds = created)
     }
 
@@ -208,6 +219,7 @@ class TaskRepositoryImpl @Inject constructor(
             notes = task.notes,
             dueAt = task.dueAt,
             repeatRule = task.repeatRule,
+            remindOffsetMinutes = task.remindOffsetMinutes,
             createdAt = task.createdAt,
             updatedAt = Instant.now(clock),
             completed = task.completed,
@@ -219,15 +231,22 @@ class TaskRepositoryImpl @Inject constructor(
             column = task.column
         )
         taskDao.upsert(entity)
+        reminderCoordinator.onTaskSaved(task.id)
     }
 
     override suspend fun updateCompletion(taskId: Long, completed: Boolean) {
-        taskDao.updateCompletion(taskId, completed, Instant.now(clock))
+        if (completed) {
+            reminderCoordinator.onTaskCompleted(taskId)
+        } else {
+            taskDao.updateCompletion(taskId, false, Instant.now(clock))
+            reminderCoordinator.onTaskSaved(taskId)
+        }
     }
 
     override suspend fun deleteTask(taskId: Long) {
         taskDao.delete(taskId)
         taskOrderDao.deleteForTask(taskId)
+        reminderCoordinator.onTaskDeleted(taskId)
     }
 
     override suspend fun getTask(taskId: Long): Task? {
@@ -274,6 +293,7 @@ class TaskRepositoryImpl @Inject constructor(
         notes = notes,
         dueAt = dueAt,
         repeatRule = repeatRule,
+        remindOffsetMinutes = remindOffsetMinutes,
         createdAt = createdAt,
         updatedAt = updatedAt,
         completed = completed,

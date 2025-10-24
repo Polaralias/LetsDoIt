@@ -25,6 +25,7 @@ data class TaskEntity(
     val notes: String? = null,
     val dueAt: Instant? = null,
     val repeatRule: String? = null,
+    val remindOffsetMinutes: Int? = null,
     val createdAt: Instant,
     val updatedAt: Instant,
     val completed: Boolean = false,

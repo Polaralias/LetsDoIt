@@ -6,7 +6,6 @@ import com.letsdoit.app.ai.AiService
 import com.letsdoit.app.data.model.Task
 import com.letsdoit.app.data.task.NewTask
 import com.letsdoit.app.data.task.TaskRepository
-import com.letsdoit.app.integrations.alarm.AlarmScheduler
 import com.letsdoit.app.integrations.calendar.CalendarBridge
 import com.letsdoit.app.nlp.NaturalLanguageParser
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +21,6 @@ import kotlinx.coroutines.launch
 class TasksListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val parser: NaturalLanguageParser,
-    private val alarmScheduler: AlarmScheduler,
     private val calendarBridge: CalendarBridge,
     private val aiService: AiService
 ) : ViewModel() {
@@ -49,11 +47,11 @@ class TasksListViewModel @Inject constructor(
                 listId = listId,
                 title = parsed.title,
                 dueAt = parsed.dueAt,
-                repeatRule = parsed.repeat?.expression
+                repeatRule = parsed.repeatRule,
+                remindOffsetMinutes = parsed.remindOffsetMinutes
             )
             val taskId = taskRepository.addTask(newTask)
             parsed.dueAt?.let { due ->
-                alarmScheduler.schedule(taskId, due, parsed.title)
                 calendarBridge.insertEvent(parsed.title, due)
             }
             _suggestions.value = aiService.suggestSubtasks(parsed.title)
@@ -65,18 +63,20 @@ class TasksListViewModel @Inject constructor(
         viewModelScope.launch {
             val newValue = !task.completed
             taskRepository.updateCompletion(task.id, newValue)
-            if (newValue) {
-                alarmScheduler.cancel(task.id)
-            } else if (task.dueAt != null) {
-                alarmScheduler.schedule(task.id, task.dueAt, task.title)
-            }
         }
     }
 
     fun remove(task: Task) {
         viewModelScope.launch {
             taskRepository.deleteTask(task.id)
-            alarmScheduler.cancel(task.id)
+        }
+    }
+
+    fun updateRecurrence(taskId: Long, repeatRule: String?, remindOffsetMinutes: Int?) {
+        viewModelScope.launch {
+            val task = taskRepository.getTask(taskId) ?: return@launch
+            val updated = task.copy(repeatRule = repeatRule, remindOffsetMinutes = remindOffsetMinutes)
+            taskRepository.updateTask(updated)
         }
     }
 }

@@ -16,8 +16,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -28,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.letsdoit.app.R
+import com.letsdoit.app.ui.components.TaskDetailSheet
 import com.letsdoit.app.ui.components.TaskCard
 import com.letsdoit.app.ui.viewmodel.TasksListViewModel
 
@@ -37,6 +41,26 @@ fun TasksListScreen(viewModel: TasksListViewModel = hiltViewModel()) {
     val input by viewModel.input.collectAsState()
     val tasks by viewModel.tasks.collectAsState()
     val suggestions by viewModel.suggestions.collectAsState()
+    val selectedTaskId = remember { mutableStateOf<Long?>(null) }
+    val selectedTask = tasks.firstOrNull { it.id == selectedTaskId.value }
+
+    LaunchedEffect(tasks) {
+        val currentId = selectedTaskId.value
+        if (currentId != null && tasks.none { it.id == currentId }) {
+            selectedTaskId.value = null
+        }
+    }
+
+    if (selectedTask != null) {
+        TaskDetailSheet(
+            task = selectedTask,
+            onDismiss = { selectedTaskId.value = null },
+            onSave = { rule, reminder ->
+                viewModel.updateRecurrence(selectedTask.id, rule, reminder)
+                selectedTaskId.value = null
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -76,6 +100,7 @@ fun TasksListScreen(viewModel: TasksListViewModel = hiltViewModel()) {
                         task = task,
                         onToggle = viewModel::toggle,
                         onRemove = viewModel::remove,
+                        onClick = { selectedTaskId.value = it.id },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

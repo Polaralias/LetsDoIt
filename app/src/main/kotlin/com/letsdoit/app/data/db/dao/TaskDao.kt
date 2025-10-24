@@ -30,6 +30,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE listId = :listId ORDER BY orderInList")
     suspend fun listByOrder(listId: Long): List<TaskEntity>
 
+    @Query("SELECT * FROM tasks")
+    suspend fun listAll(): List<TaskEntity>
+
     @Query("UPDATE tasks SET completed = :completed, updatedAt = :updatedAt WHERE id = :taskId")
     suspend fun updateCompletion(taskId: Long, completed: Boolean, updatedAt: Instant)
 
