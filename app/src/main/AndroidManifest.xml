@@ -60,5 +60,10 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/today_tasks_widget_info" />
         </receiver>
+
+        <receiver
+            android:name=".widgets.TodayWidgetToggleReceiver"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 </manifest>
