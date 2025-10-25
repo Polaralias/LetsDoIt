@@ -556,6 +556,13 @@ private fun SyncStatusSection(
         text = stringResource(id = R.string.sync_last_error, errorText),
         style = MaterialTheme.typography.bodyMedium
     )
+    val retryAfterText = status.lastRetryAfterSeconds?.let {
+        stringResource(id = R.string.sync_last_retry_after_value, it)
+    } ?: stringResource(id = R.string.sync_last_retry_after_none)
+    Text(
+        text = stringResource(id = R.string.sync_last_retry_after, retryAfterText),
+        style = MaterialTheme.typography.bodyMedium
+    )
     OutlinedTextField(
         value = resetTaskId,
         onValueChange = onResetTaskIdChanged,

@@ -64,6 +64,7 @@ class BackupCryptoTest {
                         taskId = 1,
                         remoteId = "remote",
                         etag = "etag",
+                        remoteUpdatedAt = 1550L,
                         needsPush = false,
                         lastSyncedAt = 1600L,
                         lastPulledAt = 1700L,

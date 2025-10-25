@@ -4,6 +4,14 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.work.Configuration
+import androidx.work.WorkManager
+import androidx.work.WorkerFactory
+import androidx.work.WorkerParameters
+import androidx.work.impl.WorkManagerImpl
+import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.TestListenableWorkerBuilder
+import androidx.work.testing.WorkManagerTestInitHelper
 import com.letsdoit.app.data.db.AppDatabase
 import com.letsdoit.app.data.db.entities.ListEntity
 import com.letsdoit.app.data.db.entities.SpaceEntity
@@ -17,13 +25,16 @@ import com.letsdoit.app.data.sync.TaskSyncStateManager
 import com.letsdoit.app.network.ClickUpService
 import com.letsdoit.app.network.ClickUpTaskDto
 import com.letsdoit.app.network.ClickUpTaskUpdate
+import com.letsdoit.app.security.SecurePrefs
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
+import java.util.concurrent.ExecutionException
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -38,39 +49,95 @@ import org.junit.runner.RunWith
 import retrofit2.Response
 
 @RunWith(AndroidJUnit4::class)
-class SyncManagerInstrumentedTest {
+class SyncWorkerRetryInstrumentedTest {
+    private lateinit var context: Context
     private lateinit var database: AppDatabase
-    private lateinit var manager: SyncManager
+    private lateinit var syncManager: SyncManager
     private lateinit var stateManager: TaskSyncStateManager
-    private lateinit var service: InstrumentedFakeClickUpService
-    private lateinit var statusRepository: InstrumentedFakeStatusRepository
+    private lateinit var service: RateLimitedService
+    private lateinit var statusRepository: RecordingStatusRepository
+    private lateinit var workManager: WorkManager
+    private lateinit var scheduler: SyncScheduler
+    private lateinit var retryPlanner: SyncRetryPlanner
+    private lateinit var securePrefs: SecurePrefs
     private val clock: Clock = Clock.fixed(Instant.parse("2024-01-01T00:00:00Z"), ZoneId.of("UTC"))
 
     @BeforeTest
     fun setUp() = runBlocking {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        context = ApplicationProvider.getApplicationContext()
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         stateManager = TaskSyncStateManager(database.taskSyncMetaDao())
-        service = InstrumentedFakeClickUpService()
-        statusRepository = InstrumentedFakeStatusRepository()
-        manager = SyncManager(database.taskDao(), stateManager, service, statusRepository, clock)
+        service = RateLimitedService()
+        statusRepository = RecordingStatusRepository()
+        syncManager = SyncManager(database.taskDao(), stateManager, service, statusRepository, clock)
+        val configuration = Configuration.Builder()
+            .setExecutor(SynchronousExecutor())
+            .build()
+        WorkManagerTestInitHelper.initializeTestWorkManager(context, configuration)
+        workManager = WorkManager.getInstance(context)
+        scheduler = SyncScheduler(workManager)
+        retryPlanner = SyncRetryPlanner(scheduler)
+        securePrefs = SecurePrefs(context)
+        securePrefs.write("clickup_token", "token")
+        seedTask()
     }
 
     @AfterTest
     fun tearDown() {
         database.close()
+        try {
+            workManager.cancelAllWork().result.get()
+        } catch (_: ExecutionException) {
+        } catch (_: InterruptedException) {
+        }
     }
 
     @Test
-    fun serverVersionWinsAfterConflict() = runTest {
-        val taskId = seedTask()
+    fun schedulesRetryWorkWithDelayFromHeader() = runTest {
+        val worker = TestListenableWorkerBuilder<SyncWorker>(context)
+            .setWorkerFactory(object : WorkerFactory() {
+                override fun createWorker(
+                    appContext: Context,
+                    workerClassName: String,
+                    params: WorkerParameters
+                ) = SyncWorker(appContext, params, securePrefs, syncManager, retryPlanner)
+            })
+            .build()
+
+        val result = worker.doWork()
+
+        assertIs<androidx.work.ListenableWorker.Result.Success>(result)
+        val workInfos = workManager.getWorkInfosForUniqueWork(SyncWorker.RETRY_WORK_NAME).get()
+        assertEquals(1, workInfos.size)
+        val workInfo = workInfos.first()
+        val workManagerImpl = workManager as WorkManagerImpl
+        val workSpec = workManagerImpl.workDatabase.workSpecDao().getWorkSpec(workInfo.id.toString())
+        assertIs<SyncReport.RateLimited>(statusRepository.lastReport)
+        assertEquals(45_000L, workSpec.initialDelay)
+    }
+
+    private suspend fun seedTask() {
+        val spaceDao = database.spaceDao()
+        val listDao = database.listDao()
+        spaceDao.upsert(SpaceEntity(name = "Space"))
+        val spaceId = spaceDao.listAll().first().id
+        listDao.upsert(ListEntity(spaceId = spaceId, name = "List"))
+        val listId = listDao.listAll().first().id
+        val taskId = database.taskDao().upsert(
+            TaskEntity(
+                listId = listId,
+                title = "Local",
+                createdAt = clock.instant(),
+                updatedAt = clock.instant()
+            )
+        )
         stateManager.save(
             TaskSyncMeta(
                 taskId = taskId,
-                remoteId = "remote-conflict",
-                etag = "etag-client",
+                remoteId = "remote-rate",
+                etag = null,
                 remoteUpdatedAt = null,
                 needsPush = true,
                 lastSyncedAt = null,
@@ -78,77 +145,13 @@ class SyncManagerInstrumentedTest {
                 lastPushedAt = null
             )
         )
-        service.enqueueUpdate(errorResponse(412, "conflict"))
-        service.enqueueGet(
-            Response.success(
-                ClickUpTaskDto(
-                    id = "remote-conflict",
-                    name = "Server wins",
-                    text_content = null,
-                    due_date = null,
-                    date_updated = Instant.parse("2024-01-01T00:05:00Z").toEpochMilli(),
-                    status = null
-                ),
-                Headers.headersOf("ETag", "etag-server")
-            )
-        )
-
-        manager.runFullSync()
-
-        val task = database.taskDao().getById(taskId)
-        assertEquals("Server wins", task?.title)
-        assertEquals(1L, statusRepository.status.value.conflictsResolved)
-        assertEquals(SyncResultBadge.Success, statusRepository.status.value.lastResult)
     }
 
-    private suspend fun seedTask(): Long {
-        val spaceDao = database.spaceDao()
-        val listDao = database.listDao()
-        spaceDao.upsert(SpaceEntity(name = "Space"))
-        val spaceId = spaceDao.listAll().first().id
-        listDao.upsert(ListEntity(spaceId = spaceId, name = "List"))
-        val listId = listDao.listAll().first().id
-        val now = Instant.parse("2024-01-01T00:00:00Z")
-        return database.taskDao().upsert(
-            TaskEntity(
-                listId = listId,
-                title = "Local",
-                createdAt = now,
-                updatedAt = now
-            )
-        )
-    }
-
-    private fun errorResponse(code: Int, message: String, headers: Headers = Headers.headersOf()): Response<ClickUpTaskDto> {
-        val body = message.toResponseBody("text/plain".toMediaTypeOrNull())
-        val raw = okhttp3.Response.Builder()
-            .code(code)
-            .protocol(Protocol.HTTP_1_1)
-            .message(message)
-            .request(Request.Builder().url("https://example.com").build())
-            .headers(headers)
-            .build()
-        return Response.error(body, raw)
-    }
-
-    private class InstrumentedFakeClickUpService : ClickUpService {
-        private val getQueue = ArrayDeque<Response<ClickUpTaskDto>>()
-        private val updateQueue = ArrayDeque<Response<ClickUpTaskDto>>()
-
-        fun enqueueGet(response: Response<ClickUpTaskDto>) {
-            getQueue.addLast(response)
-        }
-
-        fun enqueueUpdate(response: Response<ClickUpTaskDto>) {
-            updateQueue.addLast(response)
-        }
-
+    private class RateLimitedService : ClickUpService {
         override suspend fun getTeams(): Response<Unit> = Response.success(Unit)
-
         override suspend fun getTasks(listId: String): Response<Unit> = Response.success(Unit)
-
         override suspend fun getTask(taskId: String): Response<ClickUpTaskDto> {
-            return getQueue.removeFirst()
+            throw UnsupportedOperationException()
         }
 
         override suspend fun updateTask(
@@ -156,11 +159,27 @@ class SyncManagerInstrumentedTest {
             payload: ClickUpTaskUpdate,
             etag: String?
         ): Response<ClickUpTaskDto> {
-            return updateQueue.removeFirst()
+            return errorResponse(429, "limited", Headers.headersOf("Retry-After", "45"))
+        }
+
+        private fun errorResponse(
+            code: Int,
+            message: String,
+            headers: Headers
+        ): Response<ClickUpTaskDto> {
+            val body = message.toResponseBody("text/plain".toMediaTypeOrNull())
+            val raw = okhttp3.Response.Builder()
+                .code(code)
+                .protocol(Protocol.HTTP_1_1)
+                .message(message)
+                .request(Request.Builder().url("https://example.com").build())
+                .headers(headers)
+                .build()
+            return Response.error(body, raw)
         }
     }
 
-    private class InstrumentedFakeStatusRepository : SyncStatusRepository {
+    private class RecordingStatusRepository : SyncStatusRepository {
         private val _status = MutableStateFlow(
             SyncStatus(
                 lastFullSync = null,
@@ -173,8 +192,10 @@ class SyncManagerInstrumentedTest {
             )
         )
         override val status: Flow<SyncStatus> = _status
+        var lastReport: SyncReport? = null
 
         override suspend fun record(report: SyncReport, completedAt: Instant) {
+            lastReport = report
             _status.update { current ->
                 val summary = report.summary
                 val badge = when (report) {
@@ -194,10 +215,7 @@ class SyncManagerInstrumentedTest {
                     totalPulls = current.totalPulls + summary.pulls,
                     conflictsResolved = current.conflictsResolved + summary.conflicts,
                     lastError = error,
-                    lastRetryAfterSeconds = when (report) {
-                        is SyncReport.RateLimited -> report.retryAfterSeconds
-                        else -> null
-                    }
+                    lastRetryAfterSeconds = if (report is SyncReport.RateLimited) report.retryAfterSeconds else null
                 )
             }
         }

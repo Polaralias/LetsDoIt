@@ -97,6 +97,7 @@ data class TaskSyncMetaRecord(
     val taskId: Long,
     val remoteId: String?,
     val etag: String?,
+    val remoteUpdatedAt: Long?,
     val needsPush: Boolean,
     val lastSyncedAt: Long?,
     val lastPulledAt: Long?,

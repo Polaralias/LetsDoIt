@@ -75,6 +75,7 @@ class SyncManagerTest {
             taskId = taskId,
             remoteId = "remote-1",
             etag = null,
+            remoteUpdatedAt = null,
             needsPush = false,
             lastSyncedAt = null,
             lastPulledAt = null,
@@ -131,6 +132,7 @@ class SyncManagerTest {
             taskId = taskId,
             remoteId = "remote-2",
             etag = "etag-old",
+            remoteUpdatedAt = null,
             needsPush = true,
             lastSyncedAt = null,
             lastPulledAt = null,
@@ -169,6 +171,7 @@ class SyncManagerTest {
             taskId = taskId,
             remoteId = "remote-3",
             etag = null,
+            remoteUpdatedAt = null,
             needsPush = true,
             lastSyncedAt = null,
             lastPulledAt = null,
@@ -184,6 +187,165 @@ class SyncManagerTest {
         val status = statusRepository.status.value
         assertEquals(SyncResultBadge.Warning, status.lastResult)
         assertEquals(SyncErrorCode.RateLimited, status.lastError?.code)
+        assertEquals(30L, status.lastRetryAfterSeconds)
+    }
+
+    @Test
+    fun rateLimitWithoutRetryAfterUsesBackoff() = runTest {
+        val taskId = seedTask()
+        val meta = TaskSyncMeta(
+            taskId = taskId,
+            remoteId = "remote-4",
+            etag = null,
+            remoteUpdatedAt = null,
+            needsPush = true,
+            lastSyncedAt = null,
+            lastPulledAt = null,
+            lastPushedAt = null
+        )
+        syncStateManager.save(meta)
+        service.enqueueUpdate(errorResponse(429, "limited"))
+
+        val report = manager.runFullSync()
+
+        val rateLimited = assertIs<SyncReport.RateLimited>(report)
+        assertEquals(null, rateLimited.retryAfterSeconds)
+        assertEquals("Rate limited", rateLimited.error.message)
+        val status = statusRepository.status.value
+        assertEquals(null, status.lastRetryAfterSeconds)
+    }
+
+    @Test
+    fun remoteWinsWhenRemoteIsFresh() = runTest {
+        val taskId = seedTask()
+        val meta = TaskSyncMeta(
+            taskId = taskId,
+            remoteId = "remote-remote",
+            etag = null,
+            remoteUpdatedAt = null,
+            needsPush = false,
+            lastSyncedAt = null,
+            lastPulledAt = null,
+            lastPushedAt = null
+        )
+        syncStateManager.save(meta)
+        val remoteUpdatedAt = Instant.parse("2024-01-01T00:03:30Z")
+        service.enqueueGet(
+            Response.success(
+                ClickUpTaskDto(
+                    id = "remote-remote",
+                    name = "Server truth",
+                    text_content = null,
+                    due_date = null,
+                    date_updated = remoteUpdatedAt.toEpochMilli(),
+                    status = null
+                ),
+                Headers.headersOf("ETag", "etag-remote")
+            )
+        )
+
+        manager.runFullSync()
+
+        val updated = taskDao.getById(taskId)
+        assertEquals("Server truth", updated?.title)
+        val savedMeta = syncStateManager.find(taskId)
+        assertEquals(remoteUpdatedAt, savedMeta?.remoteUpdatedAt)
+    }
+
+    @Test
+    fun localWinsWhenAheadByThreshold() = runTest {
+        val taskId = seedTask()
+        val existing = taskDao.getById(taskId)!!
+        val localUpdatedAt = Instant.parse("2024-01-01T00:05:00Z")
+        taskDao.upsert(existing.copy(title = "Local revision", updatedAt = localUpdatedAt))
+        val meta = TaskSyncMeta(
+            taskId = taskId,
+            remoteId = "remote-local",
+            etag = null,
+            remoteUpdatedAt = null,
+            needsPush = false,
+            lastSyncedAt = null,
+            lastPulledAt = null,
+            lastPushedAt = null
+        )
+        syncStateManager.save(meta)
+        val remoteUpdatedAt = Instant.parse("2024-01-01T00:02:00Z")
+        service.enqueueGet(
+            Response.success(
+                ClickUpTaskDto(
+                    id = "remote-local",
+                    name = "Remote stale",
+                    text_content = null,
+                    due_date = null,
+                    date_updated = remoteUpdatedAt.toEpochMilli(),
+                    status = null
+                ),
+                Headers.headersOf("ETag", "etag-local")
+            )
+        )
+        val pushedUpdatedAt = Instant.parse("2024-01-01T00:05:30Z")
+        service.enqueueUpdate(
+            Response.success(
+                ClickUpTaskDto(
+                    id = "remote-local",
+                    name = "Local revision",
+                    text_content = null,
+                    due_date = null,
+                    date_updated = pushedUpdatedAt.toEpochMilli(),
+                    status = null
+                ),
+                Headers.headersOf("ETag", "etag-local-new")
+            )
+        )
+
+        manager.runFullSync()
+
+        assertEquals("etag-local", service.lastIfMatch)
+        val finalTask = taskDao.getById(taskId)
+        assertEquals("Local revision", finalTask?.title)
+        val savedMeta = syncStateManager.find(taskId)
+        assertEquals(pushedUpdatedAt, savedMeta?.remoteUpdatedAt)
+        assertEquals("etag-local-new", savedMeta?.etag)
+    }
+
+    @Test
+    fun serverWinsWhenDifferenceWithinTolerance() = runTest {
+        val taskId = seedTask()
+        val existing = taskDao.getById(taskId)!!
+        val localUpdatedAt = Instant.parse("2024-01-01T00:05:00Z")
+        taskDao.upsert(existing.copy(title = "Local tweak", updatedAt = localUpdatedAt))
+        val meta = TaskSyncMeta(
+            taskId = taskId,
+            remoteId = "remote-tie",
+            etag = null,
+            remoteUpdatedAt = null,
+            needsPush = false,
+            lastSyncedAt = null,
+            lastPulledAt = null,
+            lastPushedAt = null
+        )
+        syncStateManager.save(meta)
+        val remoteUpdatedAt = Instant.parse("2024-01-01T00:04:30Z")
+        service.enqueueGet(
+            Response.success(
+                ClickUpTaskDto(
+                    id = "remote-tie",
+                    name = "Server tie",
+                    text_content = null,
+                    due_date = null,
+                    date_updated = remoteUpdatedAt.toEpochMilli(),
+                    status = null
+                ),
+                Headers.headersOf("ETag", "etag-tie")
+            )
+        )
+
+        manager.runFullSync()
+
+        val updated = taskDao.getById(taskId)
+        assertEquals("Server tie", updated?.title)
+        val savedMeta = syncStateManager.find(taskId)
+        assertEquals(remoteUpdatedAt, savedMeta?.remoteUpdatedAt)
     }
 
     private suspend fun seedTask(): Long {
@@ -251,7 +413,8 @@ class SyncManagerTest {
                 totalPushes = 0,
                 totalPulls = 0,
                 conflictsResolved = 0,
-                lastError = null
+                lastError = null,
+                lastRetryAfterSeconds = null
             )
         )
         override val status: Flow<SyncStatus> = _status
@@ -275,7 +438,11 @@ class SyncManagerTest {
                     totalPushes = current.totalPushes + summary.pushes,
                     totalPulls = current.totalPulls + summary.pulls,
                     conflictsResolved = current.conflictsResolved + summary.conflicts,
-                    lastError = error
+                    lastError = error,
+                    lastRetryAfterSeconds = when (report) {
+                        is SyncReport.RateLimited -> report.retryAfterSeconds
+                        else -> null
+                    }
                 )
             }
         }

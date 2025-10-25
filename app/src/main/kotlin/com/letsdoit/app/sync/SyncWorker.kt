@@ -9,25 +9,23 @@ import com.letsdoit.app.security.SecurePrefs
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import retrofit2.HttpException
-import kotlin.math.max
-import kotlinx.coroutines.delay
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val securePrefs: SecurePrefs,
-    private val syncManager: SyncManager
+    private val syncManager: SyncManager,
+    private val retryPlanner: SyncRetryPlanner
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val token = securePrefs.read("clickup_token") ?: return Result.success()
         return try {
             when (val report = syncManager.runFullSync()) {
                 is SyncReport.Success -> Result.success()
-                is SyncReport.RateLimited -> {
-                    val waitSeconds = max(1L, report.retryAfterSeconds)
-                    delay(waitSeconds * 1000)
-                    Result.retry()
+                is SyncReport.RateLimited -> when (retryPlanner.plan(report.retryAfterSeconds)) {
+                    SyncRetryPlan.Scheduled -> Result.success()
+                    SyncRetryPlan.Backoff -> Result.retry()
                 }
                 is SyncReport.Failure -> if (report.retryable) Result.retry() else Result.success()
             }
@@ -42,5 +40,6 @@ class SyncWorker @AssistedInject constructor(
 
     companion object {
         const val WORK_NAME = "clickup_sync"
+        const val RETRY_WORK_NAME = "clickup_sync_retry"
     }
 }
