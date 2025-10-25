@@ -31,7 +31,11 @@ import com.letsdoit.app.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onOpenShare: () -> Unit,
+    onOpenJoin: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
     val clickUpToken by viewModel.clickUpToken.collectAsState()
     val openAiKey by viewModel.openAiKey.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
@@ -121,6 +125,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     label = { Text(text = pack.label) }
                 )
             }
+        }
+        Button(onClick = onOpenShare) {
+            Text(text = stringResource(id = R.string.share_title))
+        }
+        Button(onClick = onOpenJoin) {
+            Text(text = stringResource(id = R.string.join_title))
         }
     }
 }

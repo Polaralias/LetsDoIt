@@ -1,5 +1,7 @@
 package com.letsdoit.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,19 +31,27 @@ import com.letsdoit.app.ui.components.AppDestination
 import com.letsdoit.app.ui.components.AppTopBar
 import com.letsdoit.app.ui.screens.BucketsScreen
 import com.letsdoit.app.ui.screens.BulkAddScreen
+import com.letsdoit.app.ui.screens.JoinScreen
+import com.letsdoit.app.ui.screens.ShareScreen
 import com.letsdoit.app.ui.screens.SettingsScreen
 import com.letsdoit.app.ui.screens.TasksListScreen
 import com.letsdoit.app.ui.screens.TimelineScreen
 import com.letsdoit.app.ui.theme.AppTheme
 import com.letsdoit.app.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import androidx.navigation.NavHostController
+import androidx.navigation.navArgument
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
+    private val deepLinkEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        intent?.dataString?.let { deepLinkEvents.tryEmit(it) }
         setContent {
             val theme by viewModel.theme.collectAsState()
             val navController = rememberNavController()
@@ -92,15 +102,27 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 ) { padding ->
-                    AppNavGraph(padding, navController)
+                    AppNavGraph(padding, navController, deepLinkEvents)
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.dataString?.let { deepLinkEvents.tryEmit(it) }
+    }
 }
 
 @Composable
-private fun AppNavGraph(padding: PaddingValues, navController: androidx.navigation.NavHostController) {
+private fun AppNavGraph(padding: PaddingValues, navController: NavHostController, deepLinks: SharedFlow<String>) {
+    androidx.compose.runtime.LaunchedEffect(deepLinks) {
+        deepLinks.collect { link ->
+            navController.navigate(Destinations.Join.createRoute(link)) {
+                launchSingleTop = true
+            }
+        }
+    }
     NavHost(
         navController = navController,
         startDestination = Destinations.List.route,
@@ -116,10 +138,23 @@ private fun AppNavGraph(padding: PaddingValues, navController: androidx.navigati
             BucketsScreen()
         }
         composable(Destinations.Settings.route) {
-            SettingsScreen()
+            SettingsScreen(
+                onOpenShare = { navController.navigate(Destinations.Share.route) },
+                onOpenJoin = { navController.navigate(Destinations.Join.createRoute(null)) }
+            )
         }
         composable(Destinations.BulkAdd.route) {
             BulkAddScreen()
+        }
+        composable(Destinations.Share.route) {
+            ShareScreen(onOpenJoin = { navController.navigate(Destinations.Join.createRoute(null)) })
+        }
+        composable(
+            route = Destinations.Join.route,
+            arguments = listOf(navArgument(Destinations.Join.linkArg) { nullable = true; defaultValue = null })
+        ) { entry ->
+            val link = entry.arguments?.getString(Destinations.Join.linkArg)
+            JoinScreen(initialLink = link)
         }
     }
 }
@@ -130,6 +165,17 @@ sealed class Destinations(val route: String) {
     data object Buckets : Destinations("buckets")
     data object Settings : Destinations("settings")
     data object BulkAdd : Destinations("bulkAdd")
+    data object Share : Destinations("share")
+    data object Join : Destinations("join?link={link}") {
+        const val linkArg = "link"
+        fun createRoute(link: String?): String {
+            return if (link.isNullOrBlank()) {
+                "join"
+            } else {
+                "join?link=${Uri.encode(link)}"
+            }
+        }
+    }
 
     companion object {
         val all = listOf(List, Timeline, Buckets, Settings)
