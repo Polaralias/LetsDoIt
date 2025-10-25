@@ -18,17 +18,7 @@ class SyncScheduler @Inject constructor(
     private val workManager: WorkManager
 ) : SyncRetryScheduler {
     fun schedule() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
-            .setConstraints(constraints)
-            .build()
-        workManager.enqueueUniquePeriodicWork(
-            SyncWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            request
-        )
+        enqueuePeriodicWork(initialDelaySeconds = null)
     }
 
     override fun scheduleRetry(delaySeconds: Long) {
@@ -43,6 +33,27 @@ class SyncScheduler @Inject constructor(
         workManager.enqueueUniqueWork(
             SyncWorker.RETRY_WORK_NAME,
             ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
+    override fun delayPeriodicSync(delaySeconds: Long) {
+        enqueuePeriodicWork(initialDelaySeconds = delaySeconds)
+    }
+
+    private fun enqueuePeriodicWork(initialDelaySeconds: Long?) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val builder = PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
+            .setConstraints(constraints)
+        if (initialDelaySeconds != null) {
+            builder.setInitialDelay(initialDelaySeconds, TimeUnit.SECONDS)
+        }
+        val request = builder.build()
+        workManager.enqueueUniquePeriodicWork(
+            SyncWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
             request
         )
     }

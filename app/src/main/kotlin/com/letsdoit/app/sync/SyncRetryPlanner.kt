@@ -6,6 +6,7 @@ import kotlin.math.max
 
 interface SyncRetryScheduler {
     fun scheduleRetry(delaySeconds: Long)
+    fun delayPeriodicSync(delaySeconds: Long)
 }
 
 @Singleton
@@ -16,6 +17,7 @@ class SyncRetryPlanner @Inject constructor(
         val delay = retryAfterSeconds?.let { max(1L, it) }
         return if (delay != null) {
             syncScheduler.scheduleRetry(delay)
+            syncScheduler.delayPeriodicSync(delay)
             SyncRetryPlan.Scheduled
         } else {
             SyncRetryPlan.Backoff
