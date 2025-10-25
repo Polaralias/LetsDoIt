@@ -4,9 +4,11 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
+import com.letsdoit.app.diagnostics.DiagnosticsManager
 import com.letsdoit.app.reminders.ReminderAlarmReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
@@ -18,30 +20,64 @@ const val ACTION_REMINDER = "com.letsdoit.app.REMINDER"
 const val EXTRA_TASK_ID = "extra_task_id"
 const val EXTRA_TASK_TITLE = "extra_task_title"
 
+interface AlarmScheduler {
+    fun schedule(taskId: Long, triggerAt: Instant, title: String)
+    fun cancel(taskId: Long)
+}
+
+interface AlarmController {
+    fun setExactAndAllowWhileIdle(type: Int, triggerAtMillis: Long, operation: PendingIntent)
+    fun setInexact(type: Int, triggerAtMillis: Long, operation: PendingIntent)
+    fun cancel(operation: PendingIntent)
+}
+
 @Singleton
-class AlarmScheduler @Inject constructor(
-    @ApplicationContext private val context: Context,
+class SystemAlarmController @Inject constructor(
     private val alarmManager: AlarmManager
-) {
+) : AlarmController {
+    override fun setExactAndAllowWhileIdle(type: Int, triggerAtMillis: Long, operation: PendingIntent) {
+        AlarmManagerCompat.setExactAndAllowWhileIdle(alarmManager, type, triggerAtMillis, operation)
+    }
+
+    override fun setInexact(type: Int, triggerAtMillis: Long, operation: PendingIntent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setAndAllowWhileIdle(type, triggerAtMillis, operation)
+        } else {
+            alarmManager.set(type, triggerAtMillis, operation)
+        }
+    }
+
+    override fun cancel(operation: PendingIntent) {
+        alarmManager.cancel(operation)
+    }
+}
+
+@Singleton
+class DefaultAlarmScheduler @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val alarmController: AlarmController,
+    private val permissionRepository: ExactAlarmPermissionRepository,
+    private val diagnosticsManager: DiagnosticsManager
+) : AlarmScheduler {
     init {
         ensureChannel()
     }
 
-    fun schedule(taskId: Long, triggerAt: Instant, title: String) {
+    override fun schedule(taskId: Long, triggerAt: Instant, title: String) {
         ensureChannel()
         val pendingIntent = buildPendingIntent(taskId, title)
         val triggerMillis = triggerAt.toEpochMilli()
-        AlarmManagerCompat.setExactAndAllowWhileIdle(
-            alarmManager,
-            AlarmManager.RTC_WAKEUP,
-            triggerMillis,
-            pendingIntent
-        )
+        if (permissionRepository.isExactAlarmAllowed()) {
+            alarmController.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+        } else {
+            alarmController.setInexact(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+            diagnosticsManager.log("Reminders", "Exact alarm unavailable; scheduled inexact reminder")
+        }
     }
 
-    fun cancel(taskId: Long) {
+    override fun cancel(taskId: Long) {
         val pendingIntent = buildPendingIntent(taskId, null)
-        alarmManager.cancel(pendingIntent)
+        alarmController.cancel(pendingIntent)
     }
 
     private fun buildPendingIntent(taskId: Long, title: String?): PendingIntent {

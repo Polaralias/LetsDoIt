@@ -30,6 +30,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,9 +53,13 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.letsdoit.app.R
 import com.letsdoit.app.backup.BackupError
+import com.letsdoit.app.integrations.alarm.ExactAlarmPermissionStatus
 import com.letsdoit.app.ui.viewmodel.BackupUiState
 import com.letsdoit.app.data.sync.SyncErrorCode
 import com.letsdoit.app.data.sync.SyncResultBadge
@@ -89,6 +94,7 @@ fun SettingsScreen(
     val resetTaskId by viewModel.resetTaskId.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
     val diagnosticsState by viewModel.diagnosticsState.collectAsState()
+    val exactAlarmStatus by viewModel.exactAlarmPermission.collectAsState()
     val presets = viewModel.presets
     val accentPromptPresets = viewModel.accentPromptPresets
     val formatter = remember {
@@ -99,8 +105,19 @@ fun SettingsScreen(
     val showRestoreConfirm = remember { mutableStateOf(false) }
     val showManageDialog = remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val shareTitle = stringResource(id = R.string.diagnostics_share_title)
     val shareSubject = stringResource(id = R.string.diagnostics_share_subject)
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshExactAlarmPermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(viewModel, shareTitle, shareSubject) {
         viewModel.diagnosticsEvents.collect { event ->
@@ -195,6 +212,14 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+        ExactAlarmPermissionSection(
+            status = exactAlarmStatus,
+            onOpenSettings = {
+                viewModel.exactAlarmSettingsIntent(context.packageName)?.let { intent ->
+                    runCatching { context.startActivity(intent) }
+                }
+            }
+        )
         Text(text = stringResource(id = R.string.label_theme), style = MaterialTheme.typography.titleMedium)
         Text(text = stringResource(id = R.string.label_theme_presets), style = MaterialTheme.typography.bodyMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -603,6 +628,32 @@ private fun BackupSection(
             }
             Button(onClick = onManage, enabled = !state.isLoading && !state.isRestoring, modifier = Modifier.minimumInteractiveComponentSize()) {
                 Text(text = stringResource(id = R.string.backup_manage))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExactAlarmPermissionSection(
+    status: ExactAlarmPermissionStatus,
+    onOpenSettings: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = stringResource(id = R.string.allow_exact_alarms), style = MaterialTheme.typography.titleMedium)
+        val message = if (status.allowed) {
+            stringResource(id = R.string.exact_alarms_allowed)
+        } else {
+            stringResource(id = R.string.exact_alarms_not_allowed)
+        }
+        val colour = if (status.allowed) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            MaterialTheme.colorScheme.error
+        }
+        Text(text = message, color = colour, style = MaterialTheme.typography.bodyMedium)
+        if (!status.allowed && status.requestAvailable) {
+            Button(onClick = onOpenSettings, modifier = Modifier.minimumInteractiveComponentSize()) {
+                Text(text = stringResource(id = R.string.open_settings))
             }
         }
     }
