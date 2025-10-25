@@ -4,29 +4,32 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.letsdoit.app.network.ClickUpService
+import com.letsdoit.app.data.sync.SyncReport
 import com.letsdoit.app.security.SecurePrefs
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import retrofit2.HttpException
+import kotlin.math.max
+import kotlinx.coroutines.delay
 
 @HiltWorker
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val clickUpService: ClickUpService,
-    private val securePrefs: SecurePrefs
+    private val securePrefs: SecurePrefs,
+    private val syncManager: SyncManager
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val token = securePrefs.read("clickup_token") ?: return Result.success()
         return try {
-            val response = clickUpService.getTeams()
-            if (response.isSuccessful) {
-                Result.success()
-            } else if (response.code() in 400..499) {
-                Result.success()
-            } else {
-                Result.retry()
+            when (val report = syncManager.runFullSync()) {
+                is SyncReport.Success -> Result.success()
+                is SyncReport.RateLimited -> {
+                    val waitSeconds = max(1L, report.retryAfterSeconds)
+                    delay(waitSeconds * 1000)
+                    Result.retry()
+                }
+                is SyncReport.Failure -> if (report.retryable) Result.retry() else Result.success()
             }
         } catch (exception: Exception) {
             if (exception is HttpException && exception.code() in 400..499) {
