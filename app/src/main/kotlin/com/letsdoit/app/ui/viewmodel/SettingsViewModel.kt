@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.letsdoit.app.data.prefs.PreferencesRepository
 import com.letsdoit.app.data.prefs.ViewPreferences
+import com.letsdoit.app.data.sync.SyncResultBadge
+import com.letsdoit.app.data.sync.SyncStatus
+import com.letsdoit.app.data.sync.SyncStatusRepository
+import com.letsdoit.app.data.sync.TaskSyncStateManager
 import com.letsdoit.app.security.SecurePrefs
 import com.letsdoit.app.ui.theme.AccentManager
 import com.letsdoit.app.ui.theme.AccentPackDescriptor
@@ -25,7 +29,9 @@ class SettingsViewModel @Inject constructor(
     private val securePrefs: SecurePrefs,
     private val preferencesRepository: PreferencesRepository,
     private val presetProvider: PresetProvider,
-    private val accentManager: AccentManager
+    private val accentManager: AccentManager,
+    private val syncStatusRepository: SyncStatusRepository,
+    private val taskSyncStateManager: TaskSyncStateManager
 ) : ViewModel() {
     private val _clickUpToken = MutableStateFlow(securePrefs.read("clickup_token") ?: "")
     val clickUpToken: StateFlow<String> = _clickUpToken.asStateFlow()
@@ -43,6 +49,23 @@ class SettingsViewModel @Inject constructor(
     val accentPacks: StateFlow<List<AccentPackDescriptor>> = _accentPacks.asStateFlow()
 
     val presets = presetProvider.presets()
+
+    val syncStatus: StateFlow<SyncStatus> = syncStatusRepository.status
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            SyncStatus(
+                lastFullSync = null,
+                lastResult = SyncResultBadge.Success,
+                totalPushes = 0,
+                totalPulls = 0,
+                conflictsResolved = 0,
+                lastError = null
+            )
+        )
+
+    private val _resetTaskId = MutableStateFlow("")
+    val resetTaskId: StateFlow<String> = _resetTaskId.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -64,6 +87,18 @@ class SettingsViewModel @Inject constructor(
 
     fun saveOpenAiKey() {
         securePrefs.write("openai_key", _openAiKey.value.trim())
+    }
+
+    fun onResetTaskIdChanged(value: String) {
+        _resetTaskId.value = value
+    }
+
+    fun resetTaskState() {
+        val id = _resetTaskId.value.toLongOrNull() ?: return
+        viewModelScope.launch {
+            taskSyncStateManager.reset(id)
+            _resetTaskId.value = ""
+        }
     }
 
     fun selectPreset(key: String) {

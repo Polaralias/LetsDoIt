@@ -12,12 +12,14 @@ import com.letsdoit.app.data.db.dao.SpaceDao
 import com.letsdoit.app.data.db.dao.SubtaskDao
 import com.letsdoit.app.data.db.dao.TaskDao
 import com.letsdoit.app.data.db.dao.TaskOrderDao
+import com.letsdoit.app.data.db.dao.TaskSyncMetaDao
 import com.letsdoit.app.data.db.entities.FolderEntity
 import com.letsdoit.app.data.db.entities.ListEntity
 import com.letsdoit.app.data.db.entities.SpaceEntity
 import com.letsdoit.app.data.db.entities.SubtaskEntity
 import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
+import com.letsdoit.app.data.db.entities.TaskSyncMetaEntity
 import com.letsdoit.app.data.db.entities.AlarmIndexEntity
 
 @Database(
@@ -28,9 +30,10 @@ import com.letsdoit.app.data.db.entities.AlarmIndexEntity
         TaskEntity::class,
         SubtaskEntity::class,
         TaskOrderEntity::class,
-        AlarmIndexEntity::class
+        AlarmIndexEntity::class,
+        TaskSyncMetaEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -40,6 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun taskDao(): TaskDao
     abstract fun taskOrderDao(): TaskOrderDao
+    abstract fun taskSyncMetaDao(): TaskSyncMetaDao
     abstract fun alarmIndexDao(): AlarmIndexDao
     abstract fun subtaskDao(): SubtaskDao
 }
@@ -73,5 +77,14 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
             "CREATE TABLE IF NOT EXISTS subtasks (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, parentTaskId INTEGER NOT NULL, title TEXT NOT NULL, done INTEGER NOT NULL, dueAt INTEGER, orderInParent INTEGER NOT NULL, startAt INTEGER, durationMinutes INTEGER, FOREIGN KEY(parentTaskId) REFERENCES tasks(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS index_subtasks_parentTaskId ON subtasks(parentTaskId)")
+    }
+}
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS task_sync_meta (taskId INTEGER NOT NULL PRIMARY KEY, remoteId TEXT, etag TEXT, needsPush INTEGER NOT NULL DEFAULT 0, lastSyncedAt INTEGER, lastPulledAt INTEGER, lastPushedAt INTEGER, FOREIGN KEY(taskId) REFERENCES tasks(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_task_sync_meta_remoteId ON task_sync_meta(remoteId)")
     }
 }

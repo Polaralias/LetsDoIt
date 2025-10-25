@@ -117,4 +117,26 @@
     <string name="join_error_empty">Link required</string>
     <string name="join_processing">Joining…</string>
     <string name="share_account_picker_description">Available accounts</string>
+    <string name="sync_status_heading">ClickUp sync</string>
+    <string name="sync_last_full">Last full sync: %1$s</string>
+    <string name="sync_last_result">Last result</string>
+    <string name="sync_total_pushes">Total pushes: %1$d</string>
+    <string name="sync_total_pulls">Total pulls: %1$d</string>
+    <string name="sync_total_conflicts">Conflicts resolved: %1$d</string>
+    <string name="sync_last_error">Last error: %1$s</string>
+    <string name="sync_last_error_value">%1$s • %2$s (%3$s)</string>
+    <string name="sync_last_error_none">No errors recorded</string>
+    <string name="sync_reset_hint">Reset task ID</string>
+    <string name="sync_reset_button">Reset sync state</string>
+    <string name="sync_never">Never</string>
+    <string name="sync_result_success">Success</string>
+    <string name="sync_result_warning">Rate limited</string>
+    <string name="sync_result_error">Failed</string>
+    <string name="sync_error_unauthorised">Unauthorised</string>
+    <string name="sync_error_forbidden">Forbidden</string>
+    <string name="sync_error_not_found">Not found</string>
+    <string name="sync_error_conflict">Conflict</string>
+    <string name="sync_error_precondition">Precondition failed</string>
+    <string name="sync_error_rate_limited">Rate limited</string>
+    <string name="sync_error_unknown">Unknown</string>
 </resources>
