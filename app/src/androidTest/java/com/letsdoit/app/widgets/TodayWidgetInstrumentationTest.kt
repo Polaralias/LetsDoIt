@@ -14,7 +14,6 @@ import javax.inject.Inject
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -79,7 +78,7 @@ class TodayWidgetInstrumentationTest {
     }
 
     private suspend fun clearTasks() {
-        val existing = taskRepository.observeTasks().first()
+        val existing = taskRepository.listAllTasks()
         existing.forEach { task ->
             taskRepository.deleteTask(task.id)
         }

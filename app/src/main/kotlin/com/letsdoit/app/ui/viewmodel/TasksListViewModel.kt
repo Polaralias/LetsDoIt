@@ -3,6 +3,8 @@ package com.letsdoit.app.ui.viewmodel
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.letsdoit.app.ai.AiActionResult
 import com.letsdoit.app.ai.AiService
 import com.letsdoit.app.ai.PlanSuggestion
@@ -17,12 +19,11 @@ import com.letsdoit.app.data.subtask.SubtaskRepository
 import com.letsdoit.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -36,8 +37,7 @@ class TasksListViewModel @Inject constructor(
     private val _input = MutableStateFlow("")
     val input: StateFlow<String> = _input.asStateFlow()
 
-    val tasks: StateFlow<List<Task>> = taskRepository.observeTasks()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val tasks: Flow<PagingData<Task>> = taskRepository.observeTasks().cachedIn(viewModelScope)
 
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     val suggestions: StateFlow<List<String>> = _suggestions.asStateFlow()

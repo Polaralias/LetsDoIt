@@ -1,9 +1,12 @@
 package com.letsdoit.app.reminders
 
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.letsdoit.app.data.db.dao.AlarmIndexDao
 import com.letsdoit.app.data.db.dao.TaskDao
 import com.letsdoit.app.data.db.entities.AlarmIndexEntity
 import com.letsdoit.app.data.db.entities.TaskEntity
+import com.letsdoit.app.data.db.entities.TaskWithSubtasksRelation
 import com.letsdoit.app.integrations.alarm.AlarmScheduler
 import java.time.Clock
 import java.time.Instant
@@ -216,11 +219,25 @@ class ReminderCoordinatorTest {
             tasks[task.id] = task
         }
 
-        override fun observeAll(): Flow<List<TaskEntity>> = emptyFlow()
+        private fun simplePagingSource(builder: () -> List<TaskEntity>): PagingSource<Int, TaskEntity> =
+            object : PagingSource<Int, TaskEntity>() {
+                override fun getRefreshKey(state: PagingState<Int, TaskEntity>): Int? = null
 
-        override fun observeByList(listId: Long): Flow<List<TaskEntity>> = emptyFlow()
+                override suspend fun load(params: LoadParams<Int>): LoadResult<Int, TaskEntity> {
+                    return LoadResult.Page(data = builder(), prevKey = null, nextKey = null)
+                }
+            }
 
-        override fun observeTimeline(): Flow<List<TaskEntity>> = emptyFlow()
+        override fun pagingAll(): PagingSource<Int, TaskEntity> = simplePagingSource { tasks.values.toList() }
+
+        override fun pagingByList(listId: Long): PagingSource<Int, TaskEntity> =
+            simplePagingSource { tasks.values.filter { it.listId == listId } }
+
+        override fun pagingTimeline(): PagingSource<Int, TaskEntity> =
+            simplePagingSource { tasks.values.filter { it.dueAt != null } }
+
+        override fun pagingBoardColumn(column: String): PagingSource<Int, TaskEntity> =
+            simplePagingSource { tasks.values.filter { it.column == column } }
 
         override suspend fun listDueBefore(threshold: Instant): List<TaskEntity> = tasks.values
             .filter { !it.completed && it.dueAt != null && it.dueAt!!.isBefore(threshold) }
@@ -279,5 +296,20 @@ class ReminderCoordinatorTest {
         override suspend fun delete(taskId: Long) {
             tasks.remove(taskId)
         }
+
+        override fun searchWithSubtasks(query: String): Flow<List<TaskWithSubtasksRelation>> = emptyFlow()
+
+        override fun filterDueToday(startInclusive: Instant, endExclusive: Instant): Flow<List<TaskWithSubtasksRelation>> =
+            emptyFlow()
+
+        override fun filterOverdue(reference: Instant): Flow<List<TaskWithSubtasksRelation>> = emptyFlow()
+
+        override fun filterNoDueDate(): Flow<List<TaskWithSubtasksRelation>> = emptyFlow()
+
+        override fun filterHighPriority(): Flow<List<TaskWithSubtasksRelation>> = emptyFlow()
+
+        override fun filterLinkedToClickUp(): Flow<List<TaskWithSubtasksRelation>> = emptyFlow()
+
+        override fun filterShared(): Flow<List<TaskWithSubtasksRelation>> = emptyFlow()
     }
 }

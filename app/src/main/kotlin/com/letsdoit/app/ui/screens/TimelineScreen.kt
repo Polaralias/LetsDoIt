@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,29 +33,37 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Icon
 import androidx.navigation.NavBackStackEntry
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.items
 import com.letsdoit.app.navigation.NavStateKeys
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.firstOrNull
+import androidx.compose.runtime.snapshotFlow
 
 private val timeFormatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm").withZone(ZoneId.systemDefault())
 
 @Composable
 fun TimelineScreen(entry: NavBackStackEntry, viewModel: TimelineViewModel = hiltViewModel(entry)) {
-    val tasks by viewModel.tasks.collectAsState()
+    val taskItems = viewModel.tasks.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val focusFlow = remember(entry) {
         entry.savedStateHandle.getStateFlow(NavStateKeys.TIMELINE_FOCUS, 0L)
     }
     val target by focusFlow.collectAsState()
     var highlightId by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(tasks, target) {
+    LaunchedEffect(target) {
         if (target != 0L) {
             highlightId = target
-            val index = tasks.indexOfFirst { it.id == target }
-            if (index >= 0) {
+            val index = snapshotFlow { taskItems.itemSnapshotList.items.indexOfFirst { it.id == target } }
+                .filter { it >= 0 }
+                .firstOrNull()
+            if (index != null) {
                 listState.animateScrollToItem(index)
+                entry.savedStateHandle[NavStateKeys.TIMELINE_FOCUS] = 0L
             }
-            entry.savedStateHandle[NavStateKeys.TIMELINE_FOCUS] = 0L
         }
     }
 
@@ -65,13 +72,16 @@ fun TimelineScreen(entry: NavBackStackEntry, viewModel: TimelineViewModel = hilt
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        if (tasks.isEmpty()) {
+        val showEmpty = taskItems.loadState.refresh !is LoadState.Loading && taskItems.itemSnapshotList.items.isEmpty()
+        if (showEmpty) {
             Text(text = stringResource(id = R.string.message_empty_tasks), style = MaterialTheme.typography.bodyMedium)
         } else {
             LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(tasks, key = { it.id }) { task ->
-                    val highlight = highlightId == task.id
-                    TimelineItem(task = task, highlight = highlight)
+                items(taskItems, key = { it.id }) { task ->
+                    if (task != null) {
+                        val highlight = highlightId == task.id
+                        TimelineItem(task = task, highlight = highlight)
+                    }
                 }
             }
         }

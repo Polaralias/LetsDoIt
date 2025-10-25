@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -54,8 +55,13 @@ fun TaskCard(
         computeRecurrenceDisplay(task.repeatRule, task.dueAt, ZoneId.systemDefault())
     }
     var expanded by remember { mutableStateOf(false) }
+    val toggleAction by rememberUpdatedState(onToggle)
+    val removeAction by rememberUpdatedState(onRemove)
+    val clickAction by rememberUpdatedState(onClick)
+    val splitAction by rememberUpdatedState(onSplit)
+    val planAction by rememberUpdatedState(onPlan)
     Card(
-        modifier = modifier.clickable { onClick(task) },
+        modifier = modifier.clickable { clickAction(task) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -97,8 +103,8 @@ fun TaskCard(
                 }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Checkbox(checked = task.completed, onCheckedChange = { onToggle(task) })
-                IconButton(onClick = { onRemove(task) }) {
+                Checkbox(checked = task.completed, onCheckedChange = { toggleAction(task) })
+                IconButton(onClick = { removeAction(task) }) {
                     Icon(imageVector = Icons.Filled.Delete, contentDescription = stringResource(id = R.string.action_delete))
                 }
                 IconButton(onClick = { expanded = true }) {
@@ -109,14 +115,14 @@ fun TaskCard(
                         text = { Text(text = stringResource(id = R.string.action_split_subtasks)) },
                         onClick = {
                             expanded = false
-                            onSplit(task)
+                            splitAction(task)
                         }
                     )
                     DropdownMenuItem(
                         text = { Text(text = stringResource(id = R.string.action_draft_plan)) },
                         onClick = {
                             expanded = false
-                            onPlan(task)
+                            planAction(task)
                         }
                     )
                 }

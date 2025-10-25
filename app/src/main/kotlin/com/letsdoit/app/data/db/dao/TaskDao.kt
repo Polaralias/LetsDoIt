@@ -1,5 +1,6 @@
 package com.letsdoit.app.data.db.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
@@ -12,13 +13,19 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY completed ASC, CASE WHEN dueAt IS NULL THEN 1 ELSE 0 END, dueAt, createdAt")
-    fun observeAll(): Flow<List<TaskEntity>>
+    fun pagingAll(): PagingSource<Int, TaskEntity>
 
     @Query("SELECT * FROM tasks WHERE listId = :listId ORDER BY completed ASC, CASE WHEN dueAt IS NULL THEN 1 ELSE 0 END, dueAt, createdAt")
-    fun observeByList(listId: Long): Flow<List<TaskEntity>>
+    fun pagingByList(listId: Long): PagingSource<Int, TaskEntity>
 
     @Query("SELECT * FROM tasks WHERE dueAt IS NOT NULL ORDER BY dueAt")
-    fun observeTimeline(): Flow<List<TaskEntity>>
+    fun pagingTimeline(): PagingSource<Int, TaskEntity>
+
+    @Query(
+        "SELECT tasks.* FROM tasks INNER JOIN task_order ON task_order.taskId = tasks.id " +
+            "WHERE task_order.column = :column ORDER BY task_order.orderInColumn"
+    )
+    fun pagingBoardColumn(column: String): PagingSource<Int, TaskEntity>
 
     @Query("SELECT * FROM tasks WHERE id = :taskId")
     suspend fun getById(taskId: Long): TaskEntity?

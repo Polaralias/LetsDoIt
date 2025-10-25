@@ -8,7 +8,13 @@ import java.time.Instant
 
 @Entity(
     tableName = "tasks",
-    indices = [Index(value = ["listId"]), Index(value = ["dueAt"])],
+    indices = [
+        Index(value = ["listId"]),
+        Index(value = ["dueAt"]),
+        Index(value = ["completed"]),
+        Index(value = ["column"]),
+        Index(value = ["priority"])
+    ],
     foreignKeys = [
         ForeignKey(
             entity = ListEntity::class,

@@ -22,3 +22,9 @@
 - Added end-to-end encrypted backups stored in Google Drive App Data with one-tap export and restore from Settings
 - Scheduled automatic daily backups when on Wi-Fi and charging, with status and error visibility in-app
 - Implemented AES-GCM payload protection, zipped manifests, retention pruning and unit coverage for crypto and Drive flows
+
+## Performance and baseline optimisations
+- Added Paging 3 backed task and timeline feeds with lazy Compose collection and debounced item placement for smooth scrolling up to 10k items
+- Indexed Room entities on completion state, due dates, columns and priority to keep filters quick at scale
+- Introduced cached accent sticker loading with ImageBitmap reuse to reduce bitmap churn and memory pressure
+- Added a baseline profile module covering launch, list, board, timeline and task creation journeys, plus macro and micro benchmarks for scrolling and bulk import parsing

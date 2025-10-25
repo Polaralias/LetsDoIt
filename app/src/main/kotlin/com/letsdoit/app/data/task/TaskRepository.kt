@@ -1,5 +1,9 @@
 package com.letsdoit.app.data.task
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import androidx.room.withTransaction
 import com.letsdoit.app.data.db.AppDatabase
 import com.letsdoit.app.data.db.dao.ListDao
@@ -22,12 +26,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 interface TaskRepository {
-    fun observeTasks(): Flow<List<Task>>
-    fun observeTimeline(): Flow<List<Task>>
+    fun observeTasks(): Flow<PagingData<Task>>
+    fun observeTimeline(): Flow<PagingData<Task>>
+    fun observeBoardColumn(column: String): Flow<PagingData<Task>>
     fun observeLists(): Flow<List<ListEntity>>
     fun observeSpaces(): Flow<List<SpaceEntity>>
     suspend fun listLists(): List<ListEntity>
     suspend fun listSpaces(): List<SpaceEntity>
+    suspend fun listAllTasks(): List<Task>
     suspend fun listTodayTasks(): List<Task>
     suspend fun ensureDefaultList(): Long
     suspend fun resolveListByName(name: String): ListEntity?
@@ -90,13 +96,22 @@ class TaskRepositoryImpl @Inject constructor(
     private val defaultSpaceName = "Everywhere"
     private val defaultColumn = "To do"
 
-    override fun observeTasks(): Flow<List<Task>> = taskDao.observeAll().map { list ->
-        list.map { it.toModel() }
-    }
+    private val pagingConfig = PagingConfig(pageSize = 60, prefetchDistance = 20, enablePlaceholders = false)
 
-    override fun observeTimeline(): Flow<List<Task>> = taskDao.observeTimeline().map { list ->
-        list.map { it.toModel() }
-    }
+    override fun observeTasks(): Flow<PagingData<Task>> = Pager(
+        config = pagingConfig,
+        pagingSourceFactory = { taskDao.pagingAll() }
+    ).flow.map { data -> data.map { it.toModel() } }
+
+    override fun observeTimeline(): Flow<PagingData<Task>> = Pager(
+        config = pagingConfig,
+        pagingSourceFactory = { taskDao.pagingTimeline() }
+    ).flow.map { data -> data.map { it.toModel() } }
+
+    override fun observeBoardColumn(column: String): Flow<PagingData<Task>> = Pager(
+        config = pagingConfig,
+        pagingSourceFactory = { taskDao.pagingBoardColumn(column) }
+    ).flow.map { data -> data.map { it.toModel() } }
 
     override fun observeLists(): Flow<List<ListEntity>> = listDao.observeAll()
 
@@ -105,6 +120,8 @@ class TaskRepositoryImpl @Inject constructor(
     override suspend fun listLists(): List<ListEntity> = listDao.listAll()
 
     override suspend fun listSpaces(): List<SpaceEntity> = spaceDao.listAll()
+
+    override suspend fun listAllTasks(): List<Task> = taskDao.listAll().map { it.toModel() }
 
     override suspend fun listTodayTasks(): List<Task> {
         val now = Instant.now(clock)

@@ -6,7 +6,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "task_order",
-    indices = [Index(value = ["taskId"], unique = true)]
+    indices = [
+        Index(value = ["taskId"], unique = true),
+        Index(value = ["column"])
+    ]
 )
 data class TaskOrderEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
