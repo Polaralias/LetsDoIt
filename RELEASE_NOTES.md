@@ -10,6 +10,10 @@
 - Improved rate limit handling using Retry-After headers and structured sync errors
 - Surfaced sync telemetry and recovery tools in Settings, including reset by task ID
 
+## Diagnostics and support bundle
+- Added an opt-in diagnostics toggle capturing crashes with a rolling log buffer when enabled.
+- Added a redacted support bundle export with device metadata and share sheet delivery for support teams.
+
 ## Home widgets and reminders
 - Introduced a Glance-powered Today widget with due task list, quick add shortcut and completion toggles
 - Expanded reminder notifications with grouped alerts, timeline deep link and snooze actions

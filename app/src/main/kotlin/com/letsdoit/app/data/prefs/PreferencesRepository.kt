@@ -61,6 +61,7 @@ class PreferencesRepository @Inject constructor(
     private val defaultListIdKey = longPreferencesKey("bulk_default_list_id")
     private val bulkDurationKey = intPreferencesKey("bulk_default_duration")
     private val rememberTokensKey = booleanPreferencesKey("bulk_remember_tokens")
+    private val diagnosticsEnabledKey = booleanPreferencesKey("diagnostics_enabled")
 
     private val themeAdapter: JsonAdapter<ThemeConfig> = moshi.adapter(ThemeConfig::class.java)
 
@@ -90,6 +91,10 @@ class PreferencesRepository @Inject constructor(
             defaultDurationMinutes = preferences[bulkDurationKey] ?: BulkPreferences.Default.defaultDurationMinutes,
             rememberLastTokens = preferences[rememberTokensKey] ?: BulkPreferences.Default.rememberLastTokens
         )
+    }
+
+    val diagnosticsEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[diagnosticsEnabledKey] ?: false
     }
 
     suspend fun updateListSort(sort: ListSort) {
@@ -155,6 +160,12 @@ class PreferencesRepository @Inject constructor(
     suspend fun updateRememberBulkTokens(remember: Boolean) {
         dataStore.edit { preferences ->
             preferences[rememberTokensKey] = remember
+        }
+    }
+
+    suspend fun updateDiagnosticsEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[diagnosticsEnabledKey] = enabled
         }
     }
 

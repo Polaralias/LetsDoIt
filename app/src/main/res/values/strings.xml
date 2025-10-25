@@ -14,6 +14,14 @@
     <string name="action_show_more_for_task">More actions for “%1$s”</string>
     <string name="label_clickup_token">ClickUp token</string>
     <string name="label_openai_key">OpenAI key</string>
+    <string name="diagnostics_title">Diagnostics</string>
+    <string name="diagnostics_enable">Enable diagnostics</string>
+    <string name="accessibility_toggle_diagnostics">Toggle diagnostics collection</string>
+    <string name="diagnostics_export">Export support bundle</string>
+    <string name="diagnostics_share_title">Share support bundle</string>
+    <string name="diagnostics_share_subject">Let’s do it diagnostics</string>
+    <string name="diagnostics_error_disabled">Enable diagnostics before exporting.</string>
+    <string name="diagnostics_error_failed">Could not prepare the support bundle. Please try again.</string>
     <string name="label_accent_pack">Accent pack</string>
     <string name="accent_custom_packs_title">Saved accent packs</string>
     <string name="accent_generate_title">Generate accents</string>
