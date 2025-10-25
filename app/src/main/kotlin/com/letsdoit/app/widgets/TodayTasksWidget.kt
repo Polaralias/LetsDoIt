@@ -43,13 +43,16 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val QUICK_ADD_MAX_CHARS = 500
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    .withLocale(Locale.UK)
+    .withZone(ZoneId.systemDefault())
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)

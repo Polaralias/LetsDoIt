@@ -16,6 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.mergeDescendants
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.letsdoit.app.R
 import com.letsdoit.app.data.db.entities.ListEntity
@@ -31,7 +34,7 @@ fun BucketsScreen(viewModel: BucketsViewModel = hiltViewModel()) {
             .padding(16.dp)
     ) {
         if (lists.isEmpty()) {
-            Text(text = stringResource(id = R.string.message_empty_tasks), style = MaterialTheme.typography.bodyMedium)
+            Text(text = stringResource(id = R.string.message_empty_buckets), style = MaterialTheme.typography.bodyMedium)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(lists, key = { it.id }) { list ->
@@ -43,11 +46,19 @@ fun BucketsScreen(viewModel: BucketsViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun BucketCard(entity: ListEntity) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+internal fun BucketCard(entity: ListEntity) {
+    val spaceLabel = stringResource(id = R.string.bucket_space_label, entity.spaceId)
+    val summary = stringResource(id = R.string.accessibility_bucket_summary, entity.name, spaceLabel)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = summary
+            }
+    ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = entity.name, style = MaterialTheme.typography.titleMedium)
-            Text(text = "Space ${entity.spaceId}", style = MaterialTheme.typography.bodySmall)
+            Text(text = spaceLabel, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

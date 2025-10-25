@@ -35,6 +35,7 @@ import java.security.GeneralSecurityException
 import java.time.Clock
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -65,7 +66,9 @@ class DefaultBackupManager @Inject constructor(
 ) : BackupManager {
     private val manifestAdapter = moshi.adapter(BackupManifest::class.java)
     private val snapshotAdapter = moshi.adapter(BackupSnapshot::class.java)
-    private val formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").withZone(clock.zone)
+    private val formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+        .withLocale(Locale.UK)
+        .withZone(clock.zone)
 
     override suspend fun backupNow(): BackupResult = withContext(Dispatchers.IO) {
         try {

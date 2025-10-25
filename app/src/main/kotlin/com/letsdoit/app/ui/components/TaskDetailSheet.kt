@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
@@ -27,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,11 +40,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.mergeDescendants
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import com.letsdoit.app.R
 import com.letsdoit.app.data.model.Task
 import com.letsdoit.app.data.model.Subtask
@@ -58,7 +68,9 @@ import java.util.Locale
 
 private data class ReminderChoice(val id: String, val label: String, val minutes: Int?)
 
-private val subtaskFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm").withZone(ZoneId.systemDefault())
+private val subtaskFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm")
+    .withLocale(Locale.UK)
+    .withZone(ZoneId.systemDefault())
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -310,14 +322,17 @@ fun TaskDetailSheet(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = {
-                    currentRule = null
-                    selectedPresetId = null
-                }) {
+                TextButton(
+                    onClick = {
+                        currentRule = null
+                        selectedPresetId = null
+                    },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
                     Text(text = stringResource(id = R.string.action_clear_recurrence))
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismiss, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text(text = stringResource(id = R.string.action_close))
                 }
                 Button(
@@ -333,7 +348,8 @@ fun TaskDetailSheet(
                             onDismiss()
                         }
                     },
-                    enabled = !customReminderError
+                    enabled = !customReminderError,
+                    modifier = Modifier.minimumInteractiveComponentSize()
                 ) {
                     Text(text = stringResource(id = R.string.action_save))
                 }
@@ -344,25 +360,93 @@ fun TaskDetailSheet(
 
 @Composable
 private fun SubtasksSection(subtasks: List<Subtask>, onToggleSubtask: (Subtask) -> Unit, onMoveSubtask: (Int, Int) -> Unit) {
+    var pendingMoveIndex by remember(subtasks) { mutableStateOf<Int?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = stringResource(id = R.string.title_subtasks), style = MaterialTheme.typography.titleMedium)
         if (subtasks.isEmpty()) {
-            Text(text = stringResource(id = R.string.message_no_subtasks), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = stringResource(id = R.string.message_no_subtasks),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val lastIndex = subtasks.lastIndex
                 subtasks.forEachIndexed { index, subtask ->
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Checkbox(checked = subtask.done, onCheckedChange = { onToggleSubtask(subtask) })
+                    val actions = buildList {
+                        add(
+                            CustomAccessibilityAction(
+                                label = stringResource(id = R.string.action_move_to),
+                                action = {
+                                    pendingMoveIndex = index
+                                    true
+                                }
+                            )
+                        )
+                        if (index > 0) {
+                            add(
+                                CustomAccessibilityAction(
+                                    label = stringResource(id = R.string.action_reorder_up),
+                                    action = {
+                                        onMoveSubtask(index, index - 1)
+                                        true
+                                    }
+                                )
+                            )
+                        }
+                        if (index < lastIndex) {
+                            add(
+                                CustomAccessibilityAction(
+                                    label = stringResource(id = R.string.action_reorder_down),
+                                    action = {
+                                        onMoveSubtask(index, index + 1)
+                                        true
+                                    }
+                                )
+                            )
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.semantics(mergeDescendants = true) {
+                            customActions = actions
+                        }
+                    ) {
+                        val toggleDescription = if (subtask.done) {
+                            stringResource(id = R.string.accessibility_subtask_toggle_incomplete, subtask.title)
+                        } else {
+                            stringResource(id = R.string.accessibility_subtask_toggle_complete, subtask.title)
+                        }
+                        Checkbox(
+                            checked = subtask.done,
+                            onCheckedChange = { onToggleSubtask(subtask) },
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .semantics {
+                                    contentDescription = toggleDescription
+                                }
+                        )
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = subtask.title, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                text = subtask.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             val start = subtask.startAt?.let { Instant.ofEpochMilli(it) }
                             val duration = subtask.durationMinutes
                             val due = subtask.dueAt?.let { Instant.ofEpochMilli(it) }
                             when {
                                 start != null && duration != null -> {
                                     val formatted = subtaskFormatter.format(start)
+                                    val durationLabel = pluralStringResource(
+                                        id = R.plurals.subtask_duration_minutes,
+                                        count = duration,
+                                        duration
+                                    )
                                     Text(
-                                        text = stringResource(id = R.string.preview_plan_item_timed, formatted, stringResource(id = R.string.subtask_duration_minutes, duration)),
+                                        text = stringResource(id = R.string.preview_plan_item_timed, formatted, durationLabel),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -377,11 +461,25 @@ private fun SubtasksSection(subtasks: List<Subtask>, onToggleSubtask: (Subtask) 
                             }
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            IconButton(onClick = { onMoveSubtask(index, (index - 1).coerceAtLeast(0)) }, enabled = index > 0) {
-                                Icon(imageVector = Icons.Filled.ArrowUpward, contentDescription = stringResource(id = R.string.action_move_up))
+                            IconButton(
+                                onClick = { onMoveSubtask(index, (index - 1).coerceAtLeast(0)) },
+                                enabled = index > 0,
+                                modifier = Modifier.minimumInteractiveComponentSize()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.ArrowUpward,
+                                    contentDescription = stringResource(id = R.string.action_move_up)
+                                )
                             }
-                            IconButton(onClick = { onMoveSubtask(index, (index + 1).coerceAtMost(subtasks.lastIndex)) }, enabled = index < subtasks.lastIndex) {
-                                Icon(imageVector = Icons.Filled.ArrowDownward, contentDescription = stringResource(id = R.string.action_move_down))
+                            IconButton(
+                                onClick = { onMoveSubtask(index, (index + 1).coerceAtMost(lastIndex)) },
+                                enabled = index < lastIndex,
+                                modifier = Modifier.minimumInteractiveComponentSize()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.ArrowDownward,
+                                    contentDescription = stringResource(id = R.string.action_move_down)
+                                )
                             }
                         }
                     }
@@ -389,6 +487,58 @@ private fun SubtasksSection(subtasks: List<Subtask>, onToggleSubtask: (Subtask) 
             }
         }
     }
+    val targetIndex = pendingMoveIndex
+    if (targetIndex != null) {
+        MoveSubtaskDialog(
+            subtasks = subtasks,
+            fromIndex = targetIndex,
+            onDismiss = { pendingMoveIndex = null },
+            onMove = { toIndex ->
+                if (toIndex != targetIndex) {
+                    onMoveSubtask(targetIndex, toIndex)
+                }
+                pendingMoveIndex = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun MoveSubtaskDialog(subtasks: List<Subtask>, fromIndex: Int, onDismiss: () -> Unit, onMove: (Int) -> Unit) {
+    val scrollState = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = stringResource(id = R.string.action_move_to_title, subtasks[fromIndex].title))
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                subtasks.indices.forEach { target ->
+                    val label = stringResource(id = R.string.action_move_to_position, target + 1)
+                    TextButton(
+                        onClick = { onMove(target) },
+                        enabled = target != fromIndex,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .minimumInteractiveComponentSize()
+                    ) {
+                        Text(text = label)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.minimumInteractiveComponentSize()) {
+                Text(text = stringResource(id = R.string.action_cancel))
+            }
+        }
+    )
 }
 
 private fun specToToken(spec: WeekdaySpecifier): String {
@@ -428,11 +578,15 @@ private fun parseUntil(value: String, zoneId: ZoneId): Instant? {
 }
 
 private fun formatUntil(value: Instant, zoneId: ZoneId): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(zoneId)
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        .withLocale(Locale.UK)
+        .withZone(zoneId)
     return formatter.format(value)
 }
 
 private fun formatDisplay(instant: Instant, zoneId: ZoneId): String {
-    val formatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm").withZone(zoneId)
+    val formatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm")
+        .withLocale(Locale.UK)
+        .withZone(zoneId)
     return formatter.format(instant)
 }

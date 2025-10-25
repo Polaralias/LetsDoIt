@@ -51,6 +51,7 @@ data class RecurrenceRule(
 
     companion object {
         private val formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
+            .withLocale(Locale.UK)
 
         fun fromRRule(value: String?): RecurrenceRule? {
             if (value.isNullOrBlank()) return null

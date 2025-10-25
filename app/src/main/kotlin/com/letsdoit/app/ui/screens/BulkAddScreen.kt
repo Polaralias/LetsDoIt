@@ -55,9 +55,12 @@ import com.letsdoit.app.ui.viewmodel.BulkWarningDuePast
 import androidx.compose.ui.Alignment
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.launch
 
-private val dueFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm").withZone(ZoneId.systemDefault())
+private val dueFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm")
+    .withLocale(Locale.UK)
+    .withZone(ZoneId.systemDefault())
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable

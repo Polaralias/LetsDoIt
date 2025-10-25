@@ -1,5 +1,10 @@
 # Release notes
 
+## Accessibility and localisation readiness
+- Added TalkBack-friendly semantics for task, board and timeline cards, including alternative reordering actions and content descriptions for all controls.
+- Ensured touch targets meet 48dp guidance with high contrast palette toggle, accessible theme presets and locale-aware date formatting.
+- Localised strings with en-GB defaults, added en scaffold resources and introduced instrumentation coverage for labels plus large-font snapshot tests.
+
 ## ClickUp sync hardening
 - Added conditional requests with ETag tracking for task synchronisation
 - Improved rate limit handling using Retry-After headers and structured sync errors
