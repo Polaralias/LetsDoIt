@@ -13,6 +13,7 @@ import com.letsdoit.app.data.db.dao.SubtaskDao
 import com.letsdoit.app.data.db.dao.TaskDao
 import com.letsdoit.app.data.db.dao.TaskOrderDao
 import com.letsdoit.app.data.db.dao.TaskSyncMetaDao
+import com.letsdoit.app.data.db.dao.TranscriptSessionDao
 import com.letsdoit.app.data.db.entities.FolderEntity
 import com.letsdoit.app.data.db.entities.ListEntity
 import com.letsdoit.app.data.db.entities.SpaceEntity
@@ -23,6 +24,7 @@ import com.letsdoit.app.data.db.entities.TaskSyncMetaEntity
 import com.letsdoit.app.data.db.entities.AlarmIndexEntity
 import com.letsdoit.app.data.db.entities.SubtaskFtsEntity
 import com.letsdoit.app.data.db.entities.TaskFtsEntity
+import com.letsdoit.app.data.db.entities.TranscriptSessionEntity
 
 @Database(
     entities = [
@@ -35,9 +37,10 @@ import com.letsdoit.app.data.db.entities.TaskFtsEntity
         AlarmIndexEntity::class,
         TaskSyncMetaEntity::class,
         TaskFtsEntity::class,
-        SubtaskFtsEntity::class
+        SubtaskFtsEntity::class,
+        TranscriptSessionEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -50,6 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun taskSyncMetaDao(): TaskSyncMetaDao
     abstract fun alarmIndexDao(): AlarmIndexDao
     abstract fun subtaskDao(): SubtaskDao
+    abstract fun transcriptSessionDao(): TranscriptSessionDao
 }
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -121,5 +125,16 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
             "CREATE TRIGGER IF NOT EXISTS subtasks_fts_update AFTER UPDATE ON subtasks BEGIN INSERT INTO subtasks_fts(subtasks_fts, rowid, title) VALUES('delete', old.id, old.title); INSERT INTO subtasks_fts(rowid, title) VALUES (new.id, new.title); END"
         )
         db.execSQL("INSERT INTO subtasks_fts(rowid, title) SELECT id, title FROM subtasks")
+    }
+}
+
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS transcript_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, createdAt INTEGER NOT NULL, source TEXT NOT NULL, engine TEXT NOT NULL, langTag TEXT NOT NULL, audioPath TEXT NOT NULL, textPath TEXT, durationMs INTEGER)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_transcript_sessions_createdAt ON transcript_sessions(createdAt DESC)"
+        )
     }
 }
