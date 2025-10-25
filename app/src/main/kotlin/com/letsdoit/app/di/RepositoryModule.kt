@@ -1,5 +1,7 @@
 package com.letsdoit.app.di
 
+import com.letsdoit.app.data.search.SearchRepository
+import com.letsdoit.app.data.search.SearchRepositoryImpl
 import com.letsdoit.app.data.subtask.SubtaskRepository
 import com.letsdoit.app.data.subtask.SubtaskRepositoryImpl
 import com.letsdoit.app.data.task.TaskRepository
@@ -23,6 +25,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSubtaskRepository(impl: SubtaskRepositoryImpl): SubtaskRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
 
     companion object {
         @Provides

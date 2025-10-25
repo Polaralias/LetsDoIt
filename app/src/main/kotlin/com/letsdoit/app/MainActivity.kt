@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
@@ -17,6 +18,8 @@ import androidx.compose.material.icons.outlined.AutoAwesomeMosaic
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,15 +34,18 @@ import com.letsdoit.app.navigation.NavStateKeys
 import com.letsdoit.app.ui.components.AppBottomBar
 import com.letsdoit.app.ui.components.AppDestination
 import com.letsdoit.app.ui.components.AppTopBar
+import com.letsdoit.app.ui.components.SearchBarState
 import com.letsdoit.app.ui.screens.BucketsScreen
 import com.letsdoit.app.ui.screens.BulkAddScreen
 import com.letsdoit.app.ui.screens.JoinScreen
 import com.letsdoit.app.ui.screens.ShareScreen
+import com.letsdoit.app.ui.screens.SearchScreen
 import com.letsdoit.app.ui.screens.SettingsScreen
 import com.letsdoit.app.ui.screens.TasksListScreen
 import com.letsdoit.app.ui.screens.TimelineScreen
 import com.letsdoit.app.ui.theme.AppTheme
 import com.letsdoit.app.ui.viewmodel.MainViewModel
+import com.letsdoit.app.ui.viewmodel.SearchViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -50,6 +56,7 @@ import androidx.navigation.navArgument
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
+    private val searchViewModel: SearchViewModel by viewModels()
     private val deepLinkEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
     private val timelineFocusEvents = MutableSharedFlow<Long>(extraBufferCapacity = 1)
     private val bulkAddRequests = MutableSharedFlow<String?>(extraBufferCapacity = 1)
@@ -59,6 +66,7 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         setContent {
             val theme by viewModel.theme.collectAsState()
+            val searchState by searchViewModel.uiState.collectAsState()
             val navController = rememberNavController()
             val destinations = listOf(
                 AppDestination(Destinations.List.route, stringResource(id = R.string.nav_list), Icons.Filled.List),
@@ -76,8 +84,34 @@ class MainActivity : ComponentActivity() {
                             Destinations.BulkAdd.route -> stringResource(id = R.string.bulk_title)
                             else -> stringResource(id = R.string.app_name)
                         }
+                        val searchBarState = SearchBarState(
+                            query = searchState.query,
+                            history = searchState.history,
+                            active = searchState.searchActive,
+                            onQueryChange = searchViewModel::onQueryChange,
+                            onSearch = {
+                                searchViewModel.submitQuery()
+                                navController.navigate(Destinations.Search.route) { launchSingleTop = true }
+                            },
+                            onActiveChange = searchViewModel::onSearchActiveChange,
+                            onSelectHistory = {
+                                searchViewModel.selectHistory(it)
+                                navController.navigate(Destinations.Search.route) { launchSingleTop = true }
+                            }
+                        )
+                        val navigationIcon: (@Composable () -> Unit)? = if (currentRoute == Destinations.Search.route) {
+                            {
+                                IconButton(onClick = { navController.popBackStack() }) {
+                                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = stringResource(id = R.string.action_back))
+                                }
+                            }
+                        } else {
+                            null
+                        }
                         AppTopBar(
                             title = title,
+                            searchState = searchBarState,
+                            navigation = navigationIcon,
                             actions = {
                                 if (currentRoute == Destinations.List.route || currentRoute == Destinations.Buckets.route) {
                                     TextButton(onClick = {
@@ -197,6 +231,9 @@ private fun AppNavGraph(
         composable(Destinations.Share.route) {
             ShareScreen(onOpenJoin = { navController.navigate(Destinations.Join.createRoute(null)) })
         }
+        composable(Destinations.Search.route) {
+            SearchScreen(viewModel = searchViewModel)
+        }
         composable(
             route = Destinations.Join.route,
             arguments = listOf(navArgument(Destinations.Join.linkArg) { nullable = true; defaultValue = null })
@@ -214,6 +251,7 @@ sealed class Destinations(val route: String) {
     data object Settings : Destinations("settings")
     data object BulkAdd : Destinations("bulkAdd")
     data object Share : Destinations("share")
+    data object Search : Destinations("search")
     data object Join : Destinations("join?link={link}") {
         const val linkArg = "link"
         fun createRoute(link: String?): String {
