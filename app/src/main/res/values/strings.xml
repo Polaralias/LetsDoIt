@@ -22,6 +22,10 @@
     <string name="diagnostics_share_subject">Let’s do it diagnostics</string>
     <string name="diagnostics_error_disabled">Enable diagnostics before exporting.</string>
     <string name="diagnostics_error_failed">Could not prepare the support bundle. Please try again.</string>
+    <string name="allow_exact_alarms">Allow exact alarms</string>
+    <string name="exact_alarms_allowed">Exact alarms allowed</string>
+    <string name="exact_alarms_not_allowed">Exact alarms not allowed</string>
+    <string name="open_settings">Open settings</string>
     <string name="label_accent_pack">Accent pack</string>
     <string name="accent_custom_packs_title">Saved accent packs</string>
     <string name="accent_generate_title">Generate accents</string>

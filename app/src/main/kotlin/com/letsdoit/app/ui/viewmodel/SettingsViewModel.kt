@@ -1,5 +1,9 @@
 package com.letsdoit.app.ui.viewmodel
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.letsdoit.app.accent.AccentGenerationException
@@ -20,6 +24,8 @@ import com.letsdoit.app.data.sync.TaskSyncStateManager
 import com.letsdoit.app.security.SecurePrefs
 import com.letsdoit.app.diagnostics.DiagnosticsBundle
 import com.letsdoit.app.diagnostics.DiagnosticsManager
+import com.letsdoit.app.integrations.alarm.ExactAlarmPermissionRepository
+import com.letsdoit.app.integrations.alarm.ExactAlarmPermissionStatus
 import com.letsdoit.app.ui.theme.AccentManager
 import com.letsdoit.app.ui.theme.AccentPackDescriptor
 import com.letsdoit.app.ui.theme.CardFamily
@@ -91,7 +97,8 @@ class SettingsViewModel @Inject constructor(
     private val taskSyncStateManager: TaskSyncStateManager,
     private val backupManager: BackupManager,
     backupStatusRepository: BackupStatusRepository,
-    private val diagnosticsManager: DiagnosticsManager
+    private val diagnosticsManager: DiagnosticsManager,
+    private val exactAlarmPermissionRepository: ExactAlarmPermissionRepository
 ) : ViewModel() {
     private val _clickUpToken = MutableStateFlow(securePrefs.read("clickup_token") ?: "")
     val clickUpToken: StateFlow<String> = _clickUpToken.asStateFlow()
@@ -148,6 +155,8 @@ class SettingsViewModel @Inject constructor(
     private val _diagnosticsEvents = MutableSharedFlow<DiagnosticsEvent>(extraBufferCapacity = 1)
     val diagnosticsEvents = _diagnosticsEvents.asSharedFlow()
 
+    val exactAlarmPermission: StateFlow<ExactAlarmPermissionStatus> = exactAlarmPermissionRepository.status
+
     init {
         loadAccentPacks()
         viewModelScope.launch {
@@ -163,6 +172,9 @@ class SettingsViewModel @Inject constructor(
             }
         }
         refreshBackups()
+        viewModelScope.launch {
+            exactAlarmPermissionRepository.refresh()
+        }
     }
 
     fun onClickUpTokenChanged(value: String) {
@@ -239,6 +251,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _diagnosticsState.update { state -> state.copy(error = null) }
             preferencesRepository.updateDiagnosticsEnabled(enabled)
+        }
+    }
+
+    fun refreshExactAlarmPermission() {
+        viewModelScope.launch {
+            exactAlarmPermissionRepository.refresh()
+        }
+    }
+
+    fun exactAlarmSettingsIntent(packageName: String): Intent? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.parse("package:$packageName")
+            }
+        } else {
+            null
         }
     }
 
