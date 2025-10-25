@@ -2,6 +2,9 @@ package com.letsdoit.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.letsdoit.app.accent.AccentGenerationException
+import com.letsdoit.app.accent.AccentGenerator
+import com.letsdoit.app.accent.AccentPackInfo
 import com.letsdoit.app.backup.BackupInfo
 import com.letsdoit.app.backup.BackupManager
 import com.letsdoit.app.backup.BackupStatusError
@@ -40,12 +43,30 @@ data class BackupUiState(
     val lastError: BackupStatusError? = null
 )
 
+sealed class AccentGenerationError {
+    object MissingKey : AccentGenerationError()
+    object Network : AccentGenerationError()
+    data class Api(val message: String?) : AccentGenerationError()
+    object Unknown : AccentGenerationError()
+    object EmptyPrompt : AccentGenerationError()
+    object Storage : AccentGenerationError()
+    object Provider : AccentGenerationError()
+}
+
+data class AccentGenerationState(
+    val prompt: String = "",
+    val isGenerating: Boolean = false,
+    val pack: AccentPackInfo? = null,
+    val error: AccentGenerationError? = null
+)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val securePrefs: SecurePrefs,
     private val preferencesRepository: PreferencesRepository,
     private val presetProvider: PresetProvider,
     private val accentManager: AccentManager,
+    private val accentGenerator: AccentGenerator,
     private val syncStatusRepository: SyncStatusRepository,
     private val taskSyncStateManager: TaskSyncStateManager,
     private val backupManager: BackupManager,
@@ -66,7 +87,18 @@ class SettingsViewModel @Inject constructor(
     private val _accentPacks = MutableStateFlow<List<AccentPackDescriptor>>(emptyList())
     val accentPacks: StateFlow<List<AccentPackDescriptor>> = _accentPacks.asStateFlow()
 
+    private val _accentGeneration = MutableStateFlow(AccentGenerationState())
+    val accentGeneration: StateFlow<AccentGenerationState> = _accentGeneration.asStateFlow()
+
     val presets = presetProvider.presets()
+
+    val accentPromptPresets = listOf(
+        "Trees and nature",
+        "Animals",
+        "City",
+        "Cottage",
+        "Abstract shapes"
+    )
 
     val syncStatus: StateFlow<SyncStatus> = syncStatusRepository.status
         .stateIn(
@@ -89,9 +121,7 @@ class SettingsViewModel @Inject constructor(
     val backupState: StateFlow<BackupUiState> = _backupState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            _accentPacks.value = accentManager.availablePacks()
-        }
+        loadAccentPacks()
         viewModelScope.launch {
             backupStatusRepository.status.collect { status ->
                 _backupState.update { state ->
@@ -116,6 +146,60 @@ class SettingsViewModel @Inject constructor(
 
     fun saveOpenAiKey() {
         securePrefs.write("openai_key", _openAiKey.value.trim())
+    }
+
+    fun onAccentPromptChanged(value: String) {
+        _accentGeneration.update { state ->
+            state.copy(prompt = value, error = null)
+        }
+    }
+
+    fun useAccentPreset(prompt: String) {
+        _accentGeneration.update { state ->
+            state.copy(prompt = prompt, error = null)
+        }
+    }
+
+    fun generateAccentPack(variants: Int = 6, size: String = "512x512") {
+        val prompt = _accentGeneration.value.prompt.trim()
+        if (prompt.isEmpty()) {
+            _accentGeneration.update { state -> state.copy(error = AccentGenerationError.EmptyPrompt) }
+            return
+        }
+        viewModelScope.launch {
+            _accentGeneration.update { state -> state.copy(isGenerating = true, error = null) }
+            runCatching { accentGenerator.generatePack(prompt, variants, size) }
+                .onSuccess { info ->
+                    _accentGeneration.update { state -> state.copy(isGenerating = false, pack = info) }
+                    loadAccentPacks()
+                }
+                .onFailure { error ->
+                    val mapped = toGenerationError(error)
+                    _accentGeneration.update { state -> state.copy(isGenerating = false, error = mapped) }
+                }
+        }
+    }
+
+    fun applyGeneratedPack() {
+        val packId = _accentGeneration.value.pack?.id ?: return
+        setAccentPack(packId)
+    }
+
+    fun deleteAccentPack(packId: String) {
+        viewModelScope.launch {
+            accentManager.deletePack(packId)
+            loadAccentPacks()
+            if (theme.value.accentPackId == packId) {
+                setAccentPack(null)
+            }
+            _accentGeneration.update { state ->
+                if (state.pack?.id == packId) {
+                    state.copy(pack = null)
+                } else {
+                    state
+                }
+            }
+        }
     }
 
     fun onResetTaskIdChanged(value: String) {
@@ -189,6 +273,25 @@ class SettingsViewModel @Inject constructor(
                 }
                 is RestoreResult.Failure -> _backupState.update { state -> state.copy(isRestoring = false) }
             }
+        }
+    }
+
+    private fun loadAccentPacks() {
+        viewModelScope.launch {
+            _accentPacks.value = accentManager.availablePacks()
+        }
+    }
+
+    private fun toGenerationError(error: Throwable): AccentGenerationError {
+        return when (error) {
+            is AccentGenerationException.MissingApiKey -> AccentGenerationError.MissingKey
+            is AccentGenerationException.NetworkError -> AccentGenerationError.Network
+            is AccentGenerationException.ApiError -> AccentGenerationError.Api(error.reason)
+            is AccentGenerationException.InvalidResponse -> AccentGenerationError.Unknown
+            is AccentGenerationException.StorageError -> AccentGenerationError.Storage
+            is AccentGenerationException.ProviderUnavailable -> AccentGenerationError.Provider
+            is AccentGenerationException.EmptyPrompt -> AccentGenerationError.EmptyPrompt
+            else -> AccentGenerationError.Unknown
         }
     }
 

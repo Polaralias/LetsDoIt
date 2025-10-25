@@ -13,6 +13,11 @@
 - Introduced smart filters for due today, overdue, undated, high priority, ClickUp-linked and shared tasks
 - Enabled quick actions from search results with undo support for completion, due dates and priority updates
 
+## Theme accents generator
+- Added on-device accent pack storage with preview and removal tools in Settings
+- Introduced prompt-driven accent generation with preset ideas, OpenAI image integration and cost warning messaging
+- Enabled caching of generated packs to avoid duplicate API calls and expanded tests covering hashing and UI flows
+
 ## Encrypted Drive backups
 - Added end-to-end encrypted backups stored in Google Drive App Data with one-tap export and restore from Settings
 - Scheduled automatic daily backups when on Wi-Fi and charging, with status and error visibility in-app
