@@ -1,7 +1,8 @@
 package com.letsdoit.app.ai.model
 
+import javax.inject.Inject
 
-class AiSchemaValidator {
+class AiSchemaValidator @Inject constructor() {
     fun validate(result: AiParseResult): SchemaValidationResult {
         val errors = mutableListOf<String>()
         if (result.complexity_score < 0.0 || result.complexity_score > 1.0) {
