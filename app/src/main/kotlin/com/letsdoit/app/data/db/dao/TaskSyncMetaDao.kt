@@ -27,12 +27,12 @@ interface TaskSyncMetaDao {
     suspend fun setNeedsPush(taskId: Long, needsPush: Boolean)
 
     @Query(
-        "UPDATE task_sync_meta SET etag = :etag, needsPush = 0, lastSyncedAt = :timestamp, lastPushedAt = :timestamp WHERE taskId = :taskId"
+        "UPDATE task_sync_meta SET etag = :etag, remoteUpdatedAt = :remoteUpdatedAt, needsPush = 0, lastSyncedAt = :timestamp, lastPushedAt = :timestamp WHERE taskId = :taskId"
     )
-    suspend fun markPushed(taskId: Long, etag: String?, timestamp: Instant)
+    suspend fun markPushed(taskId: Long, etag: String?, remoteUpdatedAt: Instant?, timestamp: Instant)
 
     @Query(
-        "UPDATE task_sync_meta SET etag = :etag, needsPush = 0, lastSyncedAt = :timestamp, lastPulledAt = :timestamp WHERE taskId = :taskId"
+        "UPDATE task_sync_meta SET etag = :etag, remoteUpdatedAt = :remoteUpdatedAt, needsPush = 0, lastSyncedAt = :timestamp, lastPulledAt = :timestamp WHERE taskId = :taskId"
     )
-    suspend fun markPulled(taskId: Long, etag: String?, timestamp: Instant)
+    suspend fun markPulled(taskId: Long, etag: String?, remoteUpdatedAt: Instant?, timestamp: Instant)
 }

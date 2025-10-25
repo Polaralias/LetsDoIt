@@ -40,7 +40,7 @@ import com.letsdoit.app.data.db.entities.TranscriptSessionEntity
         SubtaskFtsEntity::class,
         TranscriptSessionEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -91,7 +91,7 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
-            "CREATE TABLE IF NOT EXISTS task_sync_meta (taskId INTEGER NOT NULL PRIMARY KEY, remoteId TEXT, etag TEXT, needsPush INTEGER NOT NULL DEFAULT 0, lastSyncedAt INTEGER, lastPulledAt INTEGER, lastPushedAt INTEGER, FOREIGN KEY(taskId) REFERENCES tasks(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+            "CREATE TABLE IF NOT EXISTS task_sync_meta (taskId INTEGER NOT NULL PRIMARY KEY, remoteId TEXT, etag TEXT, remoteUpdatedAt INTEGER, needsPush INTEGER NOT NULL DEFAULT 0, lastSyncedAt INTEGER, lastPulledAt INTEGER, lastPushedAt INTEGER, FOREIGN KEY(taskId) REFERENCES tasks(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
         )
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_task_sync_meta_remoteId ON task_sync_meta(remoteId)")
     }
@@ -136,5 +136,11 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS index_transcript_sessions_createdAt ON transcript_sessions(createdAt DESC)"
         )
+    }
+}
+
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE task_sync_meta ADD COLUMN remoteUpdatedAt INTEGER")
     }
 }

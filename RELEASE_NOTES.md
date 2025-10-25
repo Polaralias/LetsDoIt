@@ -9,6 +9,11 @@
 - Added conditional requests with ETag tracking for task synchronisation
 - Improved rate limit handling using Retry-After headers and structured sync errors
 - Surfaced sync telemetry and recovery tools in Settings, including reset by task ID
+- Implemented server-wins reconciliation with remote freshness tracking and conditional pushes for up-to-date overrides
+- Respected Retry-After delays by scheduling deferred work, persisting the window and surfacing it in Settings
+
+## Build infrastructure
+- Bundled local Gradle plugin markers so builds run in constrained network environments.
 
 ## Diagnostics and support bundle
 - Added an opt-in diagnostics toggle capturing crashes with a rolling log buffer when enabled.

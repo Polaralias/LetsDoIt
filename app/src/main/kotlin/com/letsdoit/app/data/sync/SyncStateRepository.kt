@@ -25,6 +25,7 @@ class SyncStateRepository @Inject constructor(
     private val lastErrorCodeKey = stringPreferencesKey("sync_last_error_code")
     private val lastErrorMessageKey = stringPreferencesKey("sync_last_error_message")
     private val lastErrorAtKey = longPreferencesKey("sync_last_error_at")
+    private val lastRetryAfterKey = longPreferencesKey("sync_last_retry_after")
 
     override val status: Flow<SyncStatus> = dataStore.data.map { preferences ->
         val lastFullSync = preferences[lastFullSyncKey]?.let { Instant.ofEpochMilli(it) }
@@ -47,7 +48,8 @@ class SyncStateRepository @Inject constructor(
             totalPushes = preferences[pushCountKey] ?: 0L,
             totalPulls = preferences[pullCountKey] ?: 0L,
             conflictsResolved = preferences[conflictsKey] ?: 0L,
-            lastError = error
+            lastError = error,
+            lastRetryAfterSeconds = preferences[lastRetryAfterKey]
         )
     }
 
@@ -67,12 +69,19 @@ class SyncStateRepository @Inject constructor(
                     preferences.remove(lastErrorCodeKey)
                     preferences.remove(lastErrorMessageKey)
                     preferences.remove(lastErrorAtKey)
+                    preferences.remove(lastRetryAfterKey)
                 }
                 is SyncReport.RateLimited -> {
                     preferences[lastResultKey] = SyncResultBadge.Warning.name
                     preferences[lastErrorCodeKey] = report.error.code.name
                     preferences[lastErrorMessageKey] = report.error.message
                     preferences[lastErrorAtKey] = report.error.at.toEpochMilli()
+                    val retryAfter = report.retryAfterSeconds
+                    if (retryAfter != null) {
+                        preferences[lastRetryAfterKey] = retryAfter
+                    } else {
+                        preferences.remove(lastRetryAfterKey)
+                    }
                 }
                 is SyncReport.Failure -> {
                     val badge = if (report.retryable) SyncResultBadge.Warning else SyncResultBadge.Error
@@ -80,6 +89,7 @@ class SyncStateRepository @Inject constructor(
                     preferences[lastErrorCodeKey] = report.error.code.name
                     preferences[lastErrorMessageKey] = report.error.message
                     preferences[lastErrorAtKey] = report.error.at.toEpochMilli()
+                    preferences.remove(lastRetryAfterKey)
                 }
             }
         }

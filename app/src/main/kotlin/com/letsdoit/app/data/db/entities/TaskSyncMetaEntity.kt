@@ -22,6 +22,7 @@ data class TaskSyncMetaEntity(
     @PrimaryKey val taskId: Long,
     val remoteId: String? = null,
     val etag: String? = null,
+    val remoteUpdatedAt: Instant? = null,
     val needsPush: Boolean = false,
     val lastSyncedAt: Instant? = null,
     val lastPulledAt: Instant? = null,

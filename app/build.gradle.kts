@@ -103,6 +103,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("androidx.test:core:1.5.0")
     testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("androidx.work:work-testing:2.9.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
@@ -111,6 +112,7 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.5.2")
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
     androidTestImplementation("androidx.glance:glance-appwidget-testing:1.1.1")
+    androidTestImplementation("androidx.work:work-testing:2.9.0")
     kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
     baselineProfile(project(":baselineprofile"))
 }

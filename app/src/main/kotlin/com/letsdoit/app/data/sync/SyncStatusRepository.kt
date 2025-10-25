@@ -14,7 +14,8 @@ data class SyncStatus(
     val totalPushes: Long,
     val totalPulls: Long,
     val conflictsResolved: Long,
-    val lastError: SyncError?
+    val lastError: SyncError?,
+    val lastRetryAfterSeconds: Long?
 )
 
 data class SyncError(
@@ -52,7 +53,7 @@ sealed interface SyncReport {
 
     data class RateLimited(
         override val summary: SyncSummary,
-        val retryAfterSeconds: Long,
+        val retryAfterSeconds: Long?,
         val error: SyncError
     ) : SyncReport
 

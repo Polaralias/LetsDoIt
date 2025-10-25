@@ -24,12 +24,12 @@ class TaskSyncStateManager @Inject constructor(
         taskSyncMetaDao.setNeedsPush(taskId, true)
     }
 
-    suspend fun markPulled(taskId: Long, etag: String?, timestamp: Instant) {
-        taskSyncMetaDao.markPulled(taskId, etag, timestamp)
+    suspend fun markPulled(taskId: Long, etag: String?, remoteUpdatedAt: Instant?, timestamp: Instant) {
+        taskSyncMetaDao.markPulled(taskId, etag, remoteUpdatedAt, timestamp)
     }
 
-    suspend fun markPushed(taskId: Long, etag: String?, timestamp: Instant) {
-        taskSyncMetaDao.markPushed(taskId, etag, timestamp)
+    suspend fun markPushed(taskId: Long, etag: String?, remoteUpdatedAt: Instant?, timestamp: Instant) {
+        taskSyncMetaDao.markPushed(taskId, etag, remoteUpdatedAt, timestamp)
     }
 
     suspend fun reset(taskId: Long) {

@@ -209,6 +209,9 @@
     <string name="sync_last_error">Last error: %1$s</string>
     <string name="sync_last_error_value">%1$s • %2$s (%3$s)</string>
     <string name="sync_last_error_none">No errors recorded</string>
+    <string name="sync_last_retry_after">Last retry window: %1$s</string>
+    <string name="sync_last_retry_after_value">%1$d seconds</string>
+    <string name="sync_last_retry_after_none">No Retry-After provided</string>
     <string name="sync_reset_hint">Reset task ID</string>
     <string name="sync_reset_button">Reset sync state</string>
     <string name="sync_never">Never</string>

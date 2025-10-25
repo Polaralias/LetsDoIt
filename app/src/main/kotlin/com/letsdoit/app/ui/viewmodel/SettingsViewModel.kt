@@ -131,7 +131,8 @@ class SettingsViewModel @Inject constructor(
                 totalPushes = 0,
                 totalPulls = 0,
                 conflictsResolved = 0,
-                lastError = null
+                lastError = null,
+                lastRetryAfterSeconds = null
             )
         )
 

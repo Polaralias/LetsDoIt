@@ -68,17 +68,15 @@ class SyncManager @Inject constructor(
     }
 
     private suspend fun pullTask(meta: TaskSyncMeta, remoteId: String): OperationResult {
-        if (taskDao.getById(meta.taskId) == null) {
-            return OperationResult.Completed()
-        }
+        val local = taskDao.getById(meta.taskId) ?: return OperationResult.Completed()
         val response = clickUpService.getTask(remoteId)
         if (response.isSuccessful) {
             val body = response.body()
             val etag = response.headers()[HEADER_ETAG]
             if (body != null) {
-                applyRemoteTask(meta.taskId, body)
+                return reconcile(local, meta, remoteId, body, etag)
             }
-            syncStateManager.markPulled(meta.taskId, etag, clock.instant())
+            syncStateManager.markPulled(meta.taskId, etag, meta.remoteUpdatedAt, clock.instant())
             return OperationResult.Completed(pulls = 1)
         }
         return handleErrorResponse(response)
@@ -90,7 +88,8 @@ class SyncManager @Inject constructor(
         if (response.isSuccessful) {
             val body = response.body()
             val etag = response.headers()[HEADER_ETAG] ?: meta.etag
-            syncStateManager.markPushed(meta.taskId, etag, clock.instant())
+            val remoteUpdatedAt = body?.date_updated?.let { Instant.ofEpochMilli(it) } ?: meta.remoteUpdatedAt
+            syncStateManager.markPushed(meta.taskId, etag, remoteUpdatedAt, clock.instant())
             if (body != null) {
                 applyRemoteTask(meta.taskId, body)
             }
@@ -110,10 +109,43 @@ class SyncManager @Inject constructor(
             if (body != null) {
                 applyRemoteTask(meta.taskId, body)
             }
-            syncStateManager.markPulled(meta.taskId, etag, clock.instant())
+            val remoteUpdatedAt = body?.date_updated?.let { Instant.ofEpochMilli(it) } ?: meta.remoteUpdatedAt
+            syncStateManager.markPulled(meta.taskId, etag, remoteUpdatedAt, clock.instant())
             return OperationResult.Completed(conflicts = 1)
         }
         return handleErrorResponse(refetch)
+    }
+
+    private suspend fun reconcile(
+        local: TaskEntity,
+        meta: TaskSyncMeta,
+        remoteId: String,
+        remote: ClickUpTaskDto,
+        etag: String?
+    ): OperationResult {
+        val remoteUpdatedAt = Instant.ofEpochMilli(remote.date_updated)
+        return if (local.updatedAt.isAfter(remoteUpdatedAt.plusSeconds(FRESHNESS_TOLERANCE_SECONDS))) {
+            val ifMatch = etag ?: meta.etag
+            val response = clickUpService.updateTask(remoteId, buildUpdatePayload(local), ifMatch)
+            if (response.isSuccessful) {
+                val body = response.body()
+                val newEtag = response.headers()[HEADER_ETAG] ?: ifMatch
+                val responseUpdatedAt = body?.date_updated?.let { Instant.ofEpochMilli(it) } ?: remoteUpdatedAt
+                syncStateManager.markPushed(meta.taskId, newEtag, responseUpdatedAt, clock.instant())
+                if (body != null) {
+                    applyRemoteTask(meta.taskId, body)
+                }
+                OperationResult.Completed(pushes = 1)
+            } else if (response.code() == HTTP_PRECONDITION_FAILED) {
+                resolvePrecondition(meta, remoteId)
+            } else {
+                handleErrorResponse(response)
+            }
+        } else {
+            applyRemoteTask(meta.taskId, remote)
+            syncStateManager.markPulled(meta.taskId, etag, remoteUpdatedAt, clock.instant())
+            OperationResult.Completed(pulls = 1)
+        }
     }
 
     private suspend fun applyRemoteTask(taskId: Long, remote: ClickUpTaskDto) {
@@ -145,10 +177,10 @@ class SyncManager @Inject constructor(
             val retrySeconds = parseRetryAfter(response.headers())
             val error = SyncError(
                 code = SyncErrorCode.RateLimited,
-                message = "Rate limited for ${retrySeconds} seconds",
+                message = retrySeconds?.let { "Rate limited for $it seconds" } ?: "Rate limited",
                 at = clock.instant()
             )
-            return OperationResult.RateLimited(max(1L, retrySeconds), error)
+            return OperationResult.RateLimited(retrySeconds?.let { max(1L, it) }, error)
         }
         val retryable = code >= 500
         val error = SyncError(
@@ -159,9 +191,9 @@ class SyncManager @Inject constructor(
         return OperationResult.Failed(error, retryable)
     }
 
-    private fun parseRetryAfter(headers: Headers): Long {
-        val raw = headers[HEADER_RETRY_AFTER] ?: return DEFAULT_RETRY_AFTER
-        return raw.toLongOrNull() ?: DEFAULT_RETRY_AFTER
+    private fun parseRetryAfter(headers: Headers): Long? {
+        val raw = headers[HEADER_RETRY_AFTER] ?: return null
+        return raw.toLongOrNull()
     }
 
     private fun mapErrorCode(code: Int): SyncErrorCode {
@@ -207,7 +239,7 @@ class SyncManager @Inject constructor(
             val conflicts: Int = 0
         ) : OperationResult
 
-        data class RateLimited(val retryAfterSeconds: Long, val error: SyncError) : OperationResult
+        data class RateLimited(val retryAfterSeconds: Long?, val error: SyncError) : OperationResult
 
         data class Failed(val error: SyncError, val retryable: Boolean) : OperationResult
     }
@@ -218,5 +250,6 @@ class SyncManager @Inject constructor(
         private const val HTTP_PRECONDITION_FAILED = 412
         private const val HTTP_RATE_LIMIT = 429
         private const val DEFAULT_RETRY_AFTER = 60L
+        private const val FRESHNESS_TOLERANCE_SECONDS = 120L
     }
 }
