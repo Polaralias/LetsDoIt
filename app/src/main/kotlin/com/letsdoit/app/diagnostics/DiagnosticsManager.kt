@@ -105,9 +105,10 @@ class DiagnosticsManager @Inject constructor(
                 diagnosticsDir.mkdirs()
                 cleanupOldBundles()
                 val bundleFile = File(context.cacheDir, "support-bundle-${System.currentTimeMillis()}.zip")
+                val logEntry = prepareLogEntry()
                 ZipOutputStream(FileOutputStream(bundleFile)).use { zip ->
                     writeMetadata(zip)
-                    writeLog(zip)
+                    logEntry?.let { writeLog(zip, it) }
                     writeCrashes(zip)
                 }
                 val uri = FileProvider.getUriForFile(context, bundleAuthority, bundleFile)
@@ -217,7 +218,7 @@ class DiagnosticsManager @Inject constructor(
         zip.closeEntry()
     }
 
-    private suspend fun writeLog(zip: ZipOutputStream) {
+    private suspend fun prepareLogEntry(): ByteArray? {
         val content = logMutex.withLock {
             when {
                 logFile.exists() -> logFile.readText(Charsets.UTF_8)
@@ -226,9 +227,12 @@ class DiagnosticsManager @Inject constructor(
             }
         }
         if (content.isNullOrBlank()) {
-            return
+            return null
         }
-        val entryContent = redactor.redact(content).toByteArray(Charsets.UTF_8)
+        return redactor.redact(content).toByteArray(Charsets.UTF_8)
+    }
+
+    private fun writeLog(zip: ZipOutputStream, entryContent: ByteArray) {
         zip.putNextEntry(ZipEntry("log.txt"))
         zip.write(entryContent)
         zip.closeEntry()
