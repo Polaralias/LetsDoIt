@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.kapt")
+    id("androidx.baselineprofile")
 }
 
 android {
@@ -73,6 +74,7 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
+    implementation("androidx.collection:collection-ktx:1.3.0")
 
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
@@ -110,4 +112,5 @@ dependencies {
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
     androidTestImplementation("androidx.glance:glance-appwidget-testing:1.1.1")
     kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
+    baselineProfile(project(":baselineprofile"))
 }

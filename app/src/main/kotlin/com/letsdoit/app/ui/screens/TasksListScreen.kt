@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -25,9 +25,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,45 +42,70 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.items
+import androidx.paging.LoadState
 import com.letsdoit.app.R
 import com.letsdoit.app.ui.components.TaskCard
 import com.letsdoit.app.ui.components.TaskDetailSheet
 import com.letsdoit.app.ui.viewmodel.AiPreviewState
 import com.letsdoit.app.ui.viewmodel.TasksListEvent
 import com.letsdoit.app.ui.viewmodel.TasksListViewModel
+import com.letsdoit.app.data.model.Task
+import com.letsdoit.app.ui.util.debouncedItemPlacement
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewModel = hiltViewModel()) {
     val input by viewModel.input.collectAsState()
-    val tasks by viewModel.tasks.collectAsState()
+    val taskItems = viewModel.tasks.collectAsLazyPagingItems()
     val suggestions by viewModel.suggestions.collectAsState()
     val preview by viewModel.preview.collectAsState()
     val event by viewModel.events.collectAsState()
-    val selectedTaskId = remember { mutableStateOf<Long?>(null) }
-    val selectedTask = tasks.firstOrNull { it.id == selectedTaskId.value }
+    val selectedTaskId = rememberSaveable { mutableStateOf<Long?>(null) }
+    val snapshotItems by remember { derivedStateOf { taskItems.itemSnapshotList.items } }
+    val selectedTask = remember(selectedTaskId.value, snapshotItems) {
+        snapshotItems.firstOrNull { it.id == selectedTaskId.value }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val listState = rememberLazyListState()
 
-    LaunchedEffect(tasks) {
+    LaunchedEffect(selectedTaskId.value, snapshotItems) {
         val currentId = selectedTaskId.value
-        if (currentId != null && tasks.none { it.id == currentId }) {
+        if (currentId != null && snapshotItems.none { it.id == currentId }) {
             selectedTaskId.value = null
         }
     }
 
-    if (selectedTask != null) {
-        val subtasks by viewModel.observeSubtasks(selectedTask.id).collectAsState()
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
+            .distinctUntilChanged()
+            .filter { it >= 0 }
+            .collect { index -> taskItems.loadAround(index) }
+    }
+
+    val toggleAction by rememberUpdatedState(newValue = viewModel::toggle)
+    val removeAction by rememberUpdatedState(newValue = viewModel::remove)
+    val splitAction by rememberUpdatedState(newValue = viewModel::onSplitIntoSubtasks)
+    val planAction by rememberUpdatedState(newValue = viewModel::onDraftPlan)
+    val openTask = remember { { task: com.letsdoit.app.data.model.Task -> selectedTaskId.value = task.id } }
+
+    selectedTask?.let { current ->
+        val subtasks by viewModel.observeSubtasks(current.id).collectAsState()
         TaskDetailSheet(
-            task = selectedTask,
+            task = current,
             onDismiss = { selectedTaskId.value = null },
             onSave = { rule, reminder ->
-                viewModel.updateRecurrence(selectedTask.id, rule, reminder)
+                viewModel.updateRecurrence(current.id, rule, reminder)
                 selectedTaskId.value = null
             },
             subtasks = subtasks,
             onToggleSubtask = viewModel::onToggleSubtask,
-            onMoveSubtask = { from, to -> viewModel.onMoveSubtask(selectedTask.id, from, to) }
+            onMoveSubtask = { from, to -> viewModel.onMoveSubtask(current.id, from, to) }
         )
     }
 
@@ -109,8 +138,7 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
         }
     }
 
-    if (preview != null) {
-        val current = preview
+    preview?.let { current ->
         AlertDialog(
             onDismissRequest = viewModel::dismissPreview,
             title = {
@@ -155,6 +183,10 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
         )
     }
 
+    val addAction = remember(viewModel) { { viewModel.addTask() } }
+    val onInputChange by rememberUpdatedState(newValue = viewModel::onInputChanged)
+    val showEmptyState = taskItems.loadState.refresh !is LoadState.Loading && snapshotItems.isEmpty()
+
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         Column(
             modifier = Modifier
@@ -165,41 +197,45 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
         ) {
             OutlinedTextField(
                 value = input,
-                onValueChange = viewModel::onInputChanged,
+                onValueChange = onInputChange,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text(text = stringResource(id = R.string.hint_quick_add)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, capitalization = KeyboardCapitalization.Sentences),
-                keyboardActions = KeyboardActions(onDone = { viewModel.addTask() })
+                keyboardActions = KeyboardActions(onDone = { addAction() })
             )
-            Button(onClick = { viewModel.addTask() }, modifier = Modifier.align(Alignment.End)) {
+            Button(onClick = addAction, modifier = Modifier.align(Alignment.End)) {
                 Text(text = stringResource(id = R.string.action_add))
             }
             if (suggestions.isNotEmpty()) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     suggestions.forEach { suggestion ->
                         androidx.compose.material3.AssistChip(
-                            onClick = { viewModel.onInputChanged(suggestion) },
+                            onClick = { onInputChange(suggestion) },
                             label = { Text(text = suggestion) }
                         )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
-            if (tasks.isEmpty()) {
+            if (showEmptyState) {
                 Text(text = stringResource(id = R.string.message_empty_tasks), style = MaterialTheme.typography.bodyMedium)
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(tasks, key = { it.id }) { task ->
-                        TaskCard(
-                            task = task,
-                            onToggle = viewModel::toggle,
-                            onRemove = viewModel::remove,
-                            onClick = { selectedTaskId.value = it.id },
-                            onSplit = viewModel::onSplitIntoSubtasks,
-                            onPlan = viewModel::onDraftPlan,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(taskItems, key = { it.id }) { task ->
+                        task?.let { current ->
+                            TaskCard(
+                                task = current,
+                                onToggle = toggleAction,
+                                onRemove = removeAction,
+                                onClick = openTask,
+                                onSplit = splitAction,
+                                onPlan = planAction,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .debouncedItemPlacement(current.id)
+                            )
+                        }
                     }
                 }
             }
