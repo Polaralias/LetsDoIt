@@ -101,7 +101,7 @@ class DiagnosticsManager @Inject constructor(
 
     suspend fun createSupportBundle(): DiagnosticsBundle? {
         return withContext(dispatcher) {
-            runCatching {
+            try {
                 diagnosticsDir.mkdirs()
                 cleanupOldBundles()
                 val bundleFile = File(context.cacheDir, "support-bundle-${System.currentTimeMillis()}.zip")
@@ -114,7 +114,9 @@ class DiagnosticsManager @Inject constructor(
                 val uri = FileProvider.getUriForFile(context, bundleAuthority, bundleFile)
                 log("Diagnostics", "Support bundle created")
                 DiagnosticsBundle(uri = uri, fileName = bundleFile.name)
-            }.getOrNull()
+            } catch (_: Throwable) {
+                null
+            }
         }
     }
 
