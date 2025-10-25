@@ -7,34 +7,43 @@ import androidx.compose.ui.graphics.painter.DrawablePainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.core.content.ContextCompat
 import com.letsdoit.app.R
+import com.letsdoit.app.accent.AccentPackInfo
+import com.letsdoit.app.accent.AccentStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class AccentPackDescriptor(val id: String, val label: String)
+data class AccentPackDescriptor(val id: String, val label: String, val isCustom: Boolean)
 
 interface AccentManager {
     suspend fun availablePacks(): List<AccentPackDescriptor>
     suspend fun stickerPainter(packId: String, slot: Int): Painter?
     suspend fun overlayPainter(packId: String): Painter?
+    suspend fun packInfo(packId: String): AccentPackInfo?
+    suspend fun deletePack(packId: String)
 }
 
 @Singleton
 class LocalAccentManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val accentStorage: AccentStorage
 ) : AccentManager {
-    private val storageDir: File = File(context.filesDir, "accents")
+    private val storageDir: File get() = accentStorage.rootDirectory
 
     override suspend fun availablePacks(): List<AccentPackDescriptor> {
         val resourcePacks = discoverResourcePacks()
-        val storagePacks = if (storageDir.exists()) {
-            storageDir.listFiles()?.filter { it.isDirectory }?.map { it.name } ?: emptyList()
-        } else {
-            emptyList()
+        val stored = accentStorage.listPacks().map { info ->
+            AccentPackDescriptor(id = info.id, label = info.name, isCustom = true)
         }
-        val ids = (resourcePacks + storagePacks).distinct().sorted()
-        return ids.map { id -> AccentPackDescriptor(id = id, label = id.replace('_', ' ').replaceFirstChar { it.uppercase() }) }
+        val builtIn = resourcePacks.map { id ->
+            val label = id.replace('_', ' ').replaceFirstChar { it.uppercase() }
+            AccentPackDescriptor(id = id, label = label, isCustom = false)
+        }
+        return (builtIn + stored)
+            .distinctBy { it.id }
+            .sortedWith(compareBy<AccentPackDescriptor> { it.isCustom }.thenBy { it.label.lowercase(Locale.UK) })
     }
 
     override suspend fun stickerPainter(packId: String, slot: Int): Painter? {
@@ -65,6 +74,12 @@ class LocalAccentManager @Inject constructor(
             return DrawablePainter(drawable)
         }
         return null
+    }
+
+    override suspend fun packInfo(packId: String): AccentPackInfo? = accentStorage.loadPack(packId)
+
+    override suspend fun deletePack(packId: String) {
+        accentStorage.deletePack(packId)
     }
 
     private fun discoverResourcePacks(): List<String> {
