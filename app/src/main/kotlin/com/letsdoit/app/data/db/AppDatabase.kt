@@ -21,6 +21,8 @@ import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.db.entities.TaskSyncMetaEntity
 import com.letsdoit.app.data.db.entities.AlarmIndexEntity
+import com.letsdoit.app.data.db.entities.SubtaskFtsEntity
+import com.letsdoit.app.data.db.entities.TaskFtsEntity
 
 @Database(
     entities = [
@@ -31,9 +33,11 @@ import com.letsdoit.app.data.db.entities.AlarmIndexEntity
         SubtaskEntity::class,
         TaskOrderEntity::class,
         AlarmIndexEntity::class,
-        TaskSyncMetaEntity::class
+        TaskSyncMetaEntity::class,
+        TaskFtsEntity::class,
+        SubtaskFtsEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -86,5 +90,36 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
             "CREATE TABLE IF NOT EXISTS task_sync_meta (taskId INTEGER NOT NULL PRIMARY KEY, remoteId TEXT, etag TEXT, needsPush INTEGER NOT NULL DEFAULT 0, lastSyncedAt INTEGER, lastPulledAt INTEGER, lastPushedAt INTEGER, FOREIGN KEY(taskId) REFERENCES tasks(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
         )
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_task_sync_meta_remoteId ON task_sync_meta(remoteId)")
+    }
+}
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING FTS4(title, notes, content='tasks', content_rowid='id')"
+        )
+        db.execSQL(
+            "CREATE TRIGGER IF NOT EXISTS tasks_fts_insert AFTER INSERT ON tasks BEGIN INSERT INTO tasks_fts(rowid, title, notes) VALUES (new.id, new.title, new.notes); END"
+        )
+        db.execSQL(
+            "CREATE TRIGGER IF NOT EXISTS tasks_fts_delete AFTER DELETE ON tasks BEGIN INSERT INTO tasks_fts(tasks_fts, rowid, title, notes) VALUES('delete', old.id, old.title, old.notes); END"
+        )
+        db.execSQL(
+            "CREATE TRIGGER IF NOT EXISTS tasks_fts_update AFTER UPDATE ON tasks BEGIN INSERT INTO tasks_fts(tasks_fts, rowid, title, notes) VALUES('delete', old.id, old.title, old.notes); INSERT INTO tasks_fts(rowid, title, notes) VALUES (new.id, new.title, new.notes); END"
+        )
+        db.execSQL("INSERT INTO tasks_fts(rowid, title, notes) SELECT id, title, notes FROM tasks")
+        db.execSQL(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS subtasks_fts USING FTS4(title, content='subtasks', content_rowid='id')"
+        )
+        db.execSQL(
+            "CREATE TRIGGER IF NOT EXISTS subtasks_fts_insert AFTER INSERT ON subtasks BEGIN INSERT INTO subtasks_fts(rowid, title) VALUES (new.id, new.title); END"
+        )
+        db.execSQL(
+            "CREATE TRIGGER IF NOT EXISTS subtasks_fts_delete AFTER DELETE ON subtasks BEGIN INSERT INTO subtasks_fts(subtasks_fts, rowid, title) VALUES('delete', old.id, old.title); END"
+        )
+        db.execSQL(
+            "CREATE TRIGGER IF NOT EXISTS subtasks_fts_update AFTER UPDATE ON subtasks BEGIN INSERT INTO subtasks_fts(subtasks_fts, rowid, title) VALUES('delete', old.id, old.title); INSERT INTO subtasks_fts(rowid, title) VALUES (new.id, new.title); END"
+        )
+        db.execSQL("INSERT INTO subtasks_fts(rowid, title) SELECT id, title FROM subtasks")
     }
 }
