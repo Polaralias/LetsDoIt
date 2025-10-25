@@ -29,6 +29,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.letsdoit.app.navigation.AppIntentExtras
+import com.letsdoit.app.navigation.NavStateKeys
 import com.letsdoit.app.ui.components.AppBottomBar
 import com.letsdoit.app.ui.components.AppDestination
 import com.letsdoit.app.ui.components.AppTopBar
@@ -46,6 +48,7 @@ import com.letsdoit.app.ui.viewmodel.MainViewModel
 import com.letsdoit.app.ui.viewmodel.SearchViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.navigation.NavHostController
 import androidx.navigation.navArgument
@@ -55,10 +58,12 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val searchViewModel: SearchViewModel by viewModels()
     private val deepLinkEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val timelineFocusEvents = MutableSharedFlow<Long>(extraBufferCapacity = 1)
+    private val bulkAddRequests = MutableSharedFlow<String?>(extraBufferCapacity = 1)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        intent?.dataString?.let { deepLinkEvents.tryEmit(it) }
+        handleIntent(intent)
         setContent {
             val theme by viewModel.theme.collectAsState()
             val searchState by searchViewModel.uiState.collectAsState()
@@ -136,7 +141,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 ) { padding ->
-                    AppNavGraph(padding, navController, deepLinkEvents)
+                    AppNavGraph(padding, navController, deepLinkEvents, timelineFocusEvents, bulkAddRequests)
                 }
             }
         }
@@ -144,17 +149,60 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
         intent?.dataString?.let { deepLinkEvents.tryEmit(it) }
+        if (intent?.getBooleanExtra(AppIntentExtras.OPEN_BULK_FROM_WIDGET, false) == true) {
+            val seed = intent.getStringExtra(AppIntentExtras.CLIPBOARD_SEED)
+            bulkAddRequests.tryEmit(seed)
+        }
+        intent?.getLongExtra(AppIntentExtras.TIMELINE_TASK_ID, 0L)?.takeIf { it != 0L }?.let { target ->
+            timelineFocusEvents.tryEmit(target)
+        }
     }
 }
 
 @Composable
-private fun AppNavGraph(padding: PaddingValues, navController: NavHostController, deepLinks: SharedFlow<String>) {
+private fun AppNavGraph(
+    padding: PaddingValues,
+    navController: NavHostController,
+    deepLinks: SharedFlow<String>,
+    timelineFocus: SharedFlow<Long>,
+    bulkAddRequests: SharedFlow<String?>
+) {
     androidx.compose.runtime.LaunchedEffect(deepLinks) {
         deepLinks.collect { link ->
             navController.navigate(Destinations.Join.createRoute(link)) {
                 launchSingleTop = true
             }
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(timelineFocus) {
+        timelineFocus.collect { taskId ->
+            navController.navigate(Destinations.Timeline.route) {
+                popUpTo(Destinations.List.route) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+            val entry = navController.getBackStackEntry(Destinations.Timeline.route)
+            entry.savedStateHandle[NavStateKeys.TIMELINE_FOCUS] = taskId
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(bulkAddRequests) {
+        bulkAddRequests.collect { seed ->
+            navController.navigate(Destinations.BulkAdd.route) {
+                popUpTo(Destinations.List.route) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+            val entry = navController.getBackStackEntry(Destinations.BulkAdd.route)
+            entry.savedStateHandle[NavStateKeys.BULK_SEED] = seed.orEmpty()
         }
     }
     NavHost(
@@ -165,8 +213,8 @@ private fun AppNavGraph(padding: PaddingValues, navController: NavHostController
         composable(Destinations.List.route) {
             TasksListScreen(onOpenSettings = { navController.navigate(Destinations.Settings.route) })
         }
-        composable(Destinations.Timeline.route) {
-            TimelineScreen()
+        composable(Destinations.Timeline.route) { entry ->
+            TimelineScreen(entry = entry)
         }
         composable(Destinations.Buckets.route) {
             BucketsScreen()
@@ -177,8 +225,8 @@ private fun AppNavGraph(padding: PaddingValues, navController: NavHostController
                 onOpenJoin = { navController.navigate(Destinations.Join.createRoute(null)) }
             )
         }
-        composable(Destinations.BulkAdd.route) {
-            BulkAddScreen()
+        composable(Destinations.BulkAdd.route) { entry ->
+            BulkAddScreen(entry = entry)
         }
         composable(Destinations.Share.route) {
             ShareScreen(onOpenJoin = { navController.navigate(Destinations.Join.createRoute(null)) })

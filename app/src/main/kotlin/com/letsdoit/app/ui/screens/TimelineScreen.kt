@@ -10,13 +10,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -28,14 +33,32 @@ import com.letsdoit.app.ui.viewmodel.TimelineViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Icon
+import androidx.navigation.NavBackStackEntry
+import com.letsdoit.app.navigation.NavStateKeys
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val timeFormatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm").withZone(ZoneId.systemDefault())
 
 @Composable
-fun TimelineScreen(viewModel: TimelineViewModel = hiltViewModel()) {
+fun TimelineScreen(entry: NavBackStackEntry, viewModel: TimelineViewModel = hiltViewModel(entry)) {
     val tasks by viewModel.tasks.collectAsState()
+    val listState = rememberLazyListState()
+    val focusFlow = remember(entry) {
+        entry.savedStateHandle.getStateFlow(NavStateKeys.TIMELINE_FOCUS, 0L)
+    }
+    val target by focusFlow.collectAsState()
+    var highlightId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(tasks, target) {
+        if (target != 0L) {
+            highlightId = target
+            val index = tasks.indexOfFirst { it.id == target }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
+            entry.savedStateHandle[NavStateKeys.TIMELINE_FOCUS] = 0L
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -45,9 +68,10 @@ fun TimelineScreen(viewModel: TimelineViewModel = hiltViewModel()) {
         if (tasks.isEmpty()) {
             Text(text = stringResource(id = R.string.message_empty_tasks), style = MaterialTheme.typography.bodyMedium)
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(tasks, key = { it.id }) { task ->
-                    TimelineItem(task = task)
+                    val highlight = highlightId == task.id
+                    TimelineItem(task = task, highlight = highlight)
                 }
             }
         }
@@ -55,11 +79,16 @@ fun TimelineScreen(viewModel: TimelineViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun TimelineItem(task: Task) {
+private fun TimelineItem(task: Task, highlight: Boolean) {
     val recurrenceDisplay = remember(task.repeatRule, task.dueAt) {
         computeRecurrenceDisplay(task.repeatRule, task.dueAt, ZoneId.systemDefault())
     }
-    Card(modifier = Modifier.fillMaxWidth()) {
+    val colours = if (highlight) {
+        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    } else {
+        CardDefaults.cardColors()
+    }
+    Card(modifier = Modifier.fillMaxWidth(), colors = colours) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = task.title, style = MaterialTheme.typography.titleMedium)
             task.dueAt?.let {
