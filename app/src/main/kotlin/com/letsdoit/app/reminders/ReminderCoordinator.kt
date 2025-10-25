@@ -68,6 +68,17 @@ class ReminderCoordinator @Inject constructor(
         alarmIndexDao.deleteBefore(now.toEpochMilli())
     }
 
+    suspend fun snooze(taskId: Long, minutes: Long) {
+        val task = taskDao.getById(taskId) ?: return
+        val fireAt = Instant.now(clock).plusSeconds(minutes * 60)
+        alarmScheduler.schedule(taskId, fireAt, task.title)
+        val existing = alarmIndexDao.findByTaskId(taskId)
+        if (existing != null) {
+            val updated = existing.copy(nextFireAt = fireAt.toEpochMilli())
+            alarmIndexDao.upsert(updated)
+        }
+    }
+
     private suspend fun handleTask(task: TaskEntity) {
         val now = Instant.now(clock)
         if (task.completed) {

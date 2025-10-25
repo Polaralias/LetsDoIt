@@ -15,6 +15,7 @@ import com.letsdoit.app.data.subtask.SubtaskRepository
 import com.letsdoit.app.reminders.ReminderCoordinator
 import java.time.Clock
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,7 @@ interface TaskRepository {
     fun observeSpaces(): Flow<List<SpaceEntity>>
     suspend fun listLists(): List<ListEntity>
     suspend fun listSpaces(): List<SpaceEntity>
+    suspend fun listTodayTasks(): List<Task>
     suspend fun ensureDefaultList(): Long
     suspend fun resolveListByName(name: String): ListEntity?
     suspend fun resolveListBySpace(spaceName: String, listName: String): ListEntity?
@@ -102,6 +104,18 @@ class TaskRepositoryImpl @Inject constructor(
     override suspend fun listLists(): List<ListEntity> = listDao.listAll()
 
     override suspend fun listSpaces(): List<SpaceEntity> = spaceDao.listAll()
+
+    override suspend fun listTodayTasks(): List<Task> {
+        val now = Instant.now(clock)
+        val zone = clock.zone
+        val startOfDay = now.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
+        val endOfDay = startOfDay.plus(1, ChronoUnit.DAYS)
+        val overdue = taskDao.listDueBefore(startOfDay)
+        val today = taskDao.listDueBetween(startOfDay, endOfDay)
+        return (overdue + today)
+            .sortedWith(compareBy({ it.dueAt }, { it.createdAt }))
+            .map { it.toModel() }
+    }
 
     override suspend fun ensureDefaultList(): Long {
         val existing = listDao.findByName(defaultListName)

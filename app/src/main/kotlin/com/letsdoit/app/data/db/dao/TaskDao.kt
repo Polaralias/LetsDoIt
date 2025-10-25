@@ -33,6 +33,12 @@ interface TaskDao {
     @Query("SELECT * FROM tasks")
     suspend fun listAll(): List<TaskEntity>
 
+    @Query("SELECT * FROM tasks WHERE completed = 0 AND dueAt IS NOT NULL AND dueAt < :threshold ORDER BY dueAt")
+    suspend fun listDueBefore(threshold: Instant): List<TaskEntity>
+
+    @Query("SELECT * FROM tasks WHERE completed = 0 AND dueAt IS NOT NULL AND dueAt >= :start AND dueAt < :end ORDER BY dueAt")
+    suspend fun listDueBetween(start: Instant, end: Instant): List<TaskEntity>
+
     @Query("UPDATE tasks SET completed = :completed, updatedAt = :updatedAt WHERE id = :taskId")
     suspend fun updateCompletion(taskId: Long, completed: Boolean, updatedAt: Instant)
 

@@ -40,7 +40,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
 import com.letsdoit.app.R
+import com.letsdoit.app.navigation.NavStateKeys
 import com.letsdoit.app.ui.viewmodel.BulkAddViewModel
 import com.letsdoit.app.ui.viewmodel.BulkEvent
 import com.letsdoit.app.ui.viewmodel.BulkMode
@@ -59,9 +61,19 @@ private val dueFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm").withZone(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun BulkAddScreen(viewModel: BulkAddViewModel = hiltViewModel()) {
+fun BulkAddScreen(entry: NavBackStackEntry, viewModel: BulkAddViewModel = hiltViewModel(entry)) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val seedFlow = remember(entry) {
+        entry.savedStateHandle.getStateFlow(NavStateKeys.BULK_SEED, "")
+    }
+    val pendingSeed by seedFlow.collectAsState()
+    LaunchedEffect(pendingSeed) {
+        if (pendingSeed.isNotBlank()) {
+            viewModel.onTextChanged(TextFieldValue(pendingSeed))
+            entry.savedStateHandle[NavStateKeys.BULK_SEED] = ""
+        }
+    }
     val clipboardOffer = rememberClipboardOffer(uiState.mode == BulkMode.Text)
 
     val context = LocalContext.current

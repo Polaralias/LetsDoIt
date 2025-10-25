@@ -144,6 +144,31 @@ class ReminderCoordinatorTest {
         assertEquals(Instant.parse("2025-01-02T08:50:00Z"), scheduled?.first)
     }
 
+    @Test
+    fun snoozeUpdatesScheduleAndIndex() = runBlocking {
+        val task = taskDao.insert(
+            TaskEntity(
+                id = 5,
+                listId = 1,
+                title = "Workout",
+                dueAt = Instant.parse("2025-01-01T12:00:00Z"),
+                remindOffsetMinutes = 30,
+                createdAt = Instant.parse("2024-12-31T09:00:00Z"),
+                updatedAt = Instant.parse("2024-12-31T09:00:00Z")
+            )
+        )
+
+        coordinator.onTaskSaved(task.id)
+        coordinator.snooze(task.id, 10)
+
+        val scheduled = scheduler.scheduled[task.id]
+        assertNotNull(scheduled)
+        assertEquals(Instant.parse("2025-01-01T10:10:00Z"), scheduled?.first)
+        val entry = alarmIndexDao.entries[task.id]
+        assertNotNull(entry)
+        assertEquals(Instant.parse("2025-01-01T10:10:00Z").toEpochMilli(), entry?.nextFireAt)
+    }
+
     private class FakeAlarmScheduler : AlarmScheduler {
         val scheduled = mutableMapOf<Long, Pair<Instant, String>>()
         val cancelled = mutableSetOf<Long>()
@@ -196,6 +221,17 @@ class ReminderCoordinatorTest {
         override fun observeByList(listId: Long): Flow<List<TaskEntity>> = emptyFlow()
 
         override fun observeTimeline(): Flow<List<TaskEntity>> = emptyFlow()
+
+        override suspend fun listDueBefore(threshold: Instant): List<TaskEntity> = tasks.values
+            .filter { !it.completed && it.dueAt != null && it.dueAt!!.isBefore(threshold) }
+
+        override suspend fun listDueBetween(start: Instant, end: Instant): List<TaskEntity> = tasks.values
+            .filter {
+                !it.completed &&
+                    it.dueAt != null &&
+                    !it.dueAt!!.isBefore(start) &&
+                    it.dueAt!!.isBefore(end)
+            }
 
         override suspend fun getById(taskId: Long): TaskEntity? = tasks[taskId]
 
