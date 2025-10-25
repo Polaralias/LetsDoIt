@@ -7,8 +7,10 @@ import com.letsdoit.app.data.db.dao.AlarmIndexDao
 import com.letsdoit.app.data.db.dao.FolderDao
 import com.letsdoit.app.data.db.MIGRATION_1_2
 import com.letsdoit.app.data.db.MIGRATION_2_3
+import com.letsdoit.app.data.db.MIGRATION_3_4
 import com.letsdoit.app.data.db.dao.ListDao
 import com.letsdoit.app.data.db.dao.SpaceDao
+import com.letsdoit.app.data.db.dao.SubtaskDao
 import com.letsdoit.app.data.db.dao.TaskDao
 import com.letsdoit.app.data.db.dao.TaskOrderDao
 import dagger.Module
@@ -25,7 +27,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "letsdoit.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 
@@ -46,4 +48,7 @@ object DatabaseModule {
 
     @Provides
     fun provideAlarmIndexDao(database: AppDatabase): AlarmIndexDao = database.alarmIndexDao()
+
+    @Provides
+    fun provideSubtaskDao(database: AppDatabase): SubtaskDao = database.subtaskDao()
 }

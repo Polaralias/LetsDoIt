@@ -107,7 +107,7 @@ private fun AppNavGraph(padding: PaddingValues, navController: androidx.navigati
         modifier = Modifier.padding(padding)
     ) {
         composable(Destinations.List.route) {
-            TasksListScreen()
+            TasksListScreen(onOpenSettings = { navController.navigate(Destinations.Settings.route) })
         }
         composable(Destinations.Timeline.route) {
             TimelineScreen()
