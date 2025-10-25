@@ -14,6 +14,9 @@ interface SubtaskDao {
     @Query("SELECT * FROM subtasks WHERE parentTaskId = :parentTaskId ORDER BY orderInParent")
     suspend fun listByParent(parentTaskId: Long): List<SubtaskEntity>
 
+    @Query("SELECT * FROM subtasks")
+    suspend fun listAll(): List<SubtaskEntity>
+
     @Upsert
     suspend fun upsert(subtask: SubtaskEntity): Long
 
