@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en-GB">
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
     <string name="app_name">Let’s do it</string>
     <string name="nav_list">List</string>
     <string name="nav_timeline">Timeline</string>

@@ -11,7 +11,8 @@ data class ThemeConfig(
     val cardFamily: CardFamily = CardFamily.Rounded,
     val paletteFamily: PaletteFamily = PaletteFamily.Soft,
     val accentPackId: String? = null,
-    val dynamicColour: Boolean = false
+    val dynamicColour: Boolean = false,
+    val highContrast: Boolean = false
 ) {
     companion object {
         val Default = ThemeConfig()

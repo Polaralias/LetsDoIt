@@ -47,8 +47,11 @@ import com.letsdoit.app.ui.viewmodel.SearchUiState
 import com.letsdoit.app.ui.viewmodel.SearchViewModel
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-private val resultFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm").withZone(ZoneId.systemDefault())
+private val resultFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm")
+    .withLocale(Locale.UK)
+    .withZone(ZoneId.systemDefault())
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

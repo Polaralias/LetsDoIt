@@ -24,6 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.mergeDescendants
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.letsdoit.app.R
 import com.letsdoit.app.data.model.Task
@@ -39,11 +42,14 @@ import androidx.paging.compose.items
 import com.letsdoit.app.navigation.NavStateKeys
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
 import androidx.compose.runtime.snapshotFlow
 
-private val timeFormatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm").withZone(ZoneId.systemDefault())
+private val timeFormatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm")
+    .withLocale(Locale.UK)
+    .withZone(ZoneId.systemDefault())
 
 @Composable
 fun TimelineScreen(entry: NavBackStackEntry, viewModel: TimelineViewModel = hiltViewModel(entry)) {
@@ -89,7 +95,7 @@ fun TimelineScreen(entry: NavBackStackEntry, viewModel: TimelineViewModel = hilt
 }
 
 @Composable
-private fun TimelineItem(task: Task, highlight: Boolean) {
+internal fun TimelineItem(task: Task, highlight: Boolean) {
     val recurrenceDisplay = remember(task.repeatRule, task.dueAt) {
         computeRecurrenceDisplay(task.repeatRule, task.dueAt, ZoneId.systemDefault())
     }
@@ -98,11 +104,34 @@ private fun TimelineItem(task: Task, highlight: Boolean) {
     } else {
         CardDefaults.cardColors()
     }
-    Card(modifier = Modifier.fillMaxWidth(), colors = colours) {
+    val descriptionParts = buildList {
+        add(task.title)
+        task.dueAt?.let { due ->
+            add(stringResource(id = R.string.accessibility_task_due, timeFormatter.format(due)))
+        }
+        if (recurrenceDisplay != null) {
+            add(stringResource(id = R.string.accessibility_task_repeats, recurrenceDisplay.summary))
+        }
+        if (highlight) {
+            add(stringResource(id = R.string.accessibility_timeline_highlight))
+        }
+    }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = descriptionParts.joinToString(separator = ". ")
+            },
+        colors = colours
+    ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = task.title, style = MaterialTheme.typography.titleMedium)
             task.dueAt?.let {
-                Text(text = timeFormatter.format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    text = stringResource(id = R.string.label_task_due, timeFormatter.format(it)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
             if (recurrenceDisplay != null) {
                 Spacer(modifier = Modifier.height(4.dp))

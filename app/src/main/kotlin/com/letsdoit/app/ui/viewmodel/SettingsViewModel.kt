@@ -93,11 +93,11 @@ class SettingsViewModel @Inject constructor(
     val presets = presetProvider.presets()
 
     val accentPromptPresets = listOf(
-        "Trees and nature",
-        "Animals",
-        "City",
-        "Cottage",
-        "Abstract shapes"
+        R.string.accent_prompt_preset_trees,
+        R.string.accent_prompt_preset_animals,
+        R.string.accent_prompt_preset_city,
+        R.string.accent_prompt_preset_cottage,
+        R.string.accent_prompt_preset_abstract
     )
 
     val syncStatus: StateFlow<SyncStatus> = syncStatusRepository.status
@@ -235,6 +235,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setDynamicColour(enabled: Boolean) {
         updateCustomTheme { it.copy(dynamicColour = enabled) }
+    }
+
+    fun setHighContrast(enabled: Boolean) {
+        updateCustomTheme { it.copy(highContrast = enabled) }
     }
 
     fun refreshBackups() {

@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -32,14 +33,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.mergeDescendants
+import androidx.compose.ui.semantics.semantics
+import java.util.Locale
 import com.letsdoit.app.R
 import com.letsdoit.app.data.model.Task
 import com.letsdoit.app.ui.util.computeRecurrenceDisplay
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm").withZone(ZoneId.systemDefault())
-private val nextFormatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm").withZone(ZoneId.systemDefault())
+private val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm")
+    .withLocale(Locale.UK)
+    .withZone(ZoneId.systemDefault())
+private val nextFormatter = DateTimeFormatter.ofPattern("EEE dd MMM HH:mm")
+    .withLocale(Locale.UK)
+    .withZone(ZoneId.systemDefault())
 
 @Composable
 fun TaskCard(
@@ -60,8 +70,24 @@ fun TaskCard(
     val clickAction by rememberUpdatedState(onClick)
     val splitAction by rememberUpdatedState(onSplit)
     val planAction by rememberUpdatedState(onPlan)
+    val descriptionParts = buildList {
+        add(task.title)
+        if (!task.notes.isNullOrBlank()) {
+            add(stringResource(id = R.string.accessibility_task_notes, task.notes!!))
+        }
+        task.dueAt?.let { due ->
+            add(stringResource(id = R.string.accessibility_task_due, formatter.format(due)))
+        }
+        if (recurrenceDisplay != null) {
+            add(stringResource(id = R.string.accessibility_task_repeats, recurrenceDisplay.summary))
+        }
+    }
     Card(
-        modifier = modifier.clickable { clickAction(task) },
+        modifier = modifier
+            .semantics(mergeDescendants = true) {
+                contentDescription = descriptionParts.joinToString(separator = ". ")
+            }
+            .clickable(role = Role.Button) { clickAction(task) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -75,12 +101,21 @@ fun TaskCard(
                     .weight(1f)
                     .padding(end = 12.dp)
             ) {
-                Text(text = task.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
                 if (!task.notes.isNullOrBlank()) {
                     Text(text = task.notes ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 task.dueAt?.let {
-                    Text(text = formatter.format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = stringResource(id = R.string.label_task_due, formatter.format(it)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
                 if (recurrenceDisplay != null) {
                     Spacer(modifier = Modifier.height(6.dp))
@@ -103,12 +138,37 @@ fun TaskCard(
                 }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Checkbox(checked = task.completed, onCheckedChange = { toggleAction(task) })
-                IconButton(onClick = { removeAction(task) }) {
-                    Icon(imageVector = Icons.Filled.Delete, contentDescription = stringResource(id = R.string.action_delete))
+                val toggleLabel = if (task.completed) {
+                    stringResource(id = R.string.accessibility_task_toggle_incomplete, task.title)
+                } else {
+                    stringResource(id = R.string.accessibility_task_toggle_complete, task.title)
                 }
-                IconButton(onClick = { expanded = true }) {
-                    Icon(imageVector = Icons.Filled.MoreVert, contentDescription = stringResource(id = R.string.action_more))
+                Checkbox(
+                    checked = task.completed,
+                    onCheckedChange = { toggleAction(task) },
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .semantics {
+                            contentDescription = toggleLabel
+                        }
+                )
+                IconButton(
+                    onClick = { removeAction(task) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = stringResource(id = R.string.action_delete_task, task.title)
+                    )
+                }
+                IconButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(id = R.string.action_show_more_for_task, task.title)
+                    )
                 }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(

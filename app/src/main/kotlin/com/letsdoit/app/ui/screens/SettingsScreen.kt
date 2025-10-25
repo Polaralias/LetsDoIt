@@ -41,9 +41,15 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.letsdoit.app.R
 import com.letsdoit.app.backup.BackupError
@@ -80,7 +86,11 @@ fun SettingsScreen(
     val backupState by viewModel.backupState.collectAsState()
     val presets = viewModel.presets
     val accentPromptPresets = viewModel.accentPromptPresets
-    val formatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy HH:mm").withZone(ZoneId.systemDefault()) }
+    val formatter = remember {
+        DateTimeFormatter.ofPattern("d MMM yyyy HH:mm")
+            .withLocale(Locale.UK)
+            .withZone(ZoneId.systemDefault())
+    }
     val showRestoreConfirm = remember { mutableStateOf(false) }
     val showManageDialog = remember { mutableStateOf(false) }
 
@@ -98,7 +108,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(autoCorrect = false)
         )
-        Button(onClick = { viewModel.saveClickUpToken() }) {
+        Button(onClick = { viewModel.saveClickUpToken() }, modifier = Modifier.minimumInteractiveComponentSize()) {
             Text(text = stringResource(id = R.string.action_save))
         }
         SyncStatusSection(
@@ -124,17 +134,19 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(autoCorrect = false)
         )
-        Button(onClick = { viewModel.saveOpenAiKey() }) {
+        Button(onClick = { viewModel.saveOpenAiKey() }, modifier = Modifier.minimumInteractiveComponentSize()) {
             Text(text = stringResource(id = R.string.action_save))
         }
         Text(text = stringResource(id = R.string.label_theme), style = MaterialTheme.typography.titleMedium)
         Text(text = stringResource(id = R.string.label_theme_presets), style = MaterialTheme.typography.bodyMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             presets.forEach { preset ->
+                val presetLabel = stringResource(id = preset.label)
                 FilterChip(
                     selected = preset.key == preferences.themePreset,
                     onClick = { viewModel.selectPreset(preset.key) },
-                    label = { Text(text = preset.label) }
+                    label = { Text(text = presetLabel) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
                 )
             }
         }
@@ -142,44 +154,68 @@ fun SettingsScreen(
         Text(text = stringResource(id = R.string.label_shape), style = MaterialTheme.typography.bodyMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             CardFamily.entries.forEach { shape ->
+                val label = stringResource(
+                    id = when (shape) {
+                        CardFamily.Cloud -> R.string.theme_shape_cloud
+                        CardFamily.Square -> R.string.theme_shape_square
+                        CardFamily.Sharp -> R.string.theme_shape_sharp
+                        CardFamily.Rounded -> R.string.theme_shape_rounded
+                    }
+                )
                 FilterChip(
                     selected = shape == theme.cardFamily,
                     onClick = { viewModel.setCardFamily(shape) },
-                    label = { Text(text = shape.name.lowercase().replaceFirstChar { if (it.isLowerCase()) it.uppercase() else it.toString() }) }
+                    label = { Text(text = label) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
                 )
             }
         }
         Text(text = stringResource(id = R.string.label_palette), style = MaterialTheme.typography.bodyMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PaletteFamily.entries.forEach { palette ->
+                val label = stringResource(
+                    id = when (palette) {
+                        PaletteFamily.Dark -> R.string.theme_palette_dark
+                        PaletteFamily.Moody -> R.string.theme_palette_moody
+                        PaletteFamily.Pastel -> R.string.theme_palette_pastel
+                        PaletteFamily.Soft -> R.string.theme_palette_soft
+                    }
+                )
                 FilterChip(
                     selected = palette == theme.paletteFamily,
                     onClick = { viewModel.setPaletteFamily(palette) },
-                    label = { Text(text = palette.name.lowercase().replaceFirstChar { if (it.isLowerCase()) it.uppercase() else it.toString() }) }
+                    label = { Text(text = label) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
                 )
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(text = stringResource(id = R.string.label_dynamic_colour), style = MaterialTheme.typography.bodyMedium)
-            Switch(
-                checked = theme.dynamicColour,
-                onCheckedChange = { viewModel.setDynamicColour(it) },
-                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
-            )
-        }
+        ThemeToggleRow(
+            text = stringResource(id = R.string.label_dynamic_colour),
+            checked = theme.dynamicColour,
+            onToggle = viewModel::setDynamicColour,
+            description = stringResource(id = R.string.accessibility_toggle_dynamic_colour)
+        )
+        ThemeToggleRow(
+            text = stringResource(id = R.string.label_high_contrast),
+            checked = theme.highContrast,
+            onToggle = viewModel::setHighContrast,
+            description = stringResource(id = R.string.accessibility_toggle_high_contrast)
+        )
         Text(text = stringResource(id = R.string.label_accent_pack), style = MaterialTheme.typography.bodyMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val neutralLabel = stringResource(id = R.string.label_neutral_pack)
             FilterChip(
                 selected = theme.accentPackId == null,
                 onClick = { viewModel.setAccentPack(null) },
-                label = { Text(text = neutralLabel) }
+                label = { Text(text = neutralLabel) },
+                modifier = Modifier.minimumInteractiveComponentSize()
             )
             accentPacks.forEach { pack ->
                 FilterChip(
                     selected = pack.id == theme.accentPackId,
                     onClick = { viewModel.setAccentPack(pack.id) },
-                    label = { Text(text = pack.label) }
+                    label = { Text(text = pack.label) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
                 )
             }
         }
@@ -202,7 +238,7 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = { viewModel.deleteAccentPack(pack.id) }) {
+                        TextButton(onClick = { viewModel.deleteAccentPack(pack.id) }, modifier = Modifier.minimumInteractiveComponentSize()) {
                             Text(text = stringResource(id = R.string.action_delete))
                         }
                     }
@@ -217,11 +253,13 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            accentPromptPresets.forEach { prompt ->
+            accentPromptPresets.forEach { promptRes ->
+                val prompt = stringResource(id = promptRes)
                 AssistChip(
                     onClick = { viewModel.useAccentPreset(prompt) },
                     label = { Text(text = prompt) },
-                    colors = AssistChipDefaults.assistChipColors()
+                    colors = AssistChipDefaults.assistChipColors(),
+                    modifier = Modifier.minimumInteractiveComponentSize()
                 )
             }
         }
@@ -236,7 +274,8 @@ fun SettingsScreen(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = { viewModel.generateAccentPack() },
-                enabled = !accentGeneration.isGenerating
+                enabled = !accentGeneration.isGenerating,
+                modifier = Modifier.minimumInteractiveComponentSize()
             ) {
                 Text(text = stringResource(id = R.string.accent_generate_action))
             }
@@ -267,21 +306,26 @@ fun SettingsScreen(
         accentGeneration.pack?.let { pack ->
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringResource(id = R.string.accent_preview_title, pack.name, pack.count),
+                text = stringResource(
+                    id = R.string.accent_preview_title,
+                    pack.name,
+                    pluralStringResource(id = R.plurals.accent_preview_count, count = pack.count, pack.count)
+                ),
                 style = MaterialTheme.typography.titleSmall
             )
             AccentPreviewGrid(packId = pack.id, count = pack.count)
             Button(
                 onClick = { viewModel.applyGeneratedPack() },
-                enabled = !accentGeneration.isGenerating
+                enabled = !accentGeneration.isGenerating,
+                modifier = Modifier.minimumInteractiveComponentSize()
             ) {
                 Text(text = stringResource(id = R.string.accent_save_action))
             }
         }
-        Button(onClick = onOpenShare) {
+        Button(onClick = onOpenShare, modifier = Modifier.minimumInteractiveComponentSize()) {
             Text(text = stringResource(id = R.string.share_title))
         }
-        Button(onClick = onOpenJoin) {
+        Button(onClick = onOpenJoin, modifier = Modifier.minimumInteractiveComponentSize()) {
             Text(text = stringResource(id = R.string.join_title))
         }
     }
@@ -295,12 +339,12 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     showRestoreConfirm.value = false
                     viewModel.restoreLatest()
-                }) {
+                }, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text(text = stringResource(id = R.string.backup_restore_confirm_action))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRestoreConfirm.value = false }) {
+                TextButton(onClick = { showRestoreConfirm.value = false }, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text(text = stringResource(id = R.string.action_cancel))
                 }
             }
@@ -315,15 +359,36 @@ fun SettingsScreen(
                 BackupList(state = backupState, formatter = formatter)
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.refreshBackups() }) {
+                TextButton(onClick = { viewModel.refreshBackups() }, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text(text = stringResource(id = R.string.backup_refresh))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showManageDialog.value = false }) {
+                TextButton(onClick = { showManageDialog.value = false }, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text(text = stringResource(id = R.string.action_close))
                 }
             }
+        )
+    }
+}
+
+@Composable
+internal fun ThemeToggleRow(text: String, checked: Boolean, onToggle: (Boolean) -> Unit, description: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onToggle),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .semantics { contentDescription = description },
+            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
         )
     }
 }
@@ -374,7 +439,9 @@ private fun SyncStatusSection(
     onResetTaskState: () -> Unit
 ) {
     val formatter = remember {
-        DateTimeFormatter.ofPattern("d MMM yyyy HH:mm").withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("d MMM yyyy HH:mm")
+            .withLocale(Locale.UK)
+            .withZone(ZoneId.systemDefault())
     }
     Text(
         text = stringResource(id = R.string.sync_status_heading),
@@ -438,7 +505,7 @@ private fun SyncStatusSection(
         modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
     )
-    Button(onClick = onResetTaskState, enabled = resetTaskId.isNotBlank()) {
+    Button(onClick = onResetTaskState, enabled = resetTaskId.isNotBlank(), modifier = Modifier.minimumInteractiveComponentSize()) {
         Text(text = stringResource(id = R.string.sync_reset_button))
     }
 }
@@ -470,13 +537,13 @@ private fun BackupSection(
             Text(text = stringResource(id = R.string.backup_restoring), style = MaterialTheme.typography.bodySmall)
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = onBackupNow, enabled = !state.isLoading && !state.isRestoring) {
+            Button(onClick = onBackupNow, enabled = !state.isLoading && !state.isRestoring, modifier = Modifier.minimumInteractiveComponentSize()) {
                 Text(text = stringResource(id = R.string.backup_back_up_now))
             }
-            Button(onClick = onRestore, enabled = !state.isLoading && !state.isRestoring) {
+            Button(onClick = onRestore, enabled = !state.isLoading && !state.isRestoring, modifier = Modifier.minimumInteractiveComponentSize()) {
                 Text(text = stringResource(id = R.string.backup_restore))
             }
-            Button(onClick = onManage, enabled = !state.isLoading && !state.isRestoring) {
+            Button(onClick = onManage, enabled = !state.isLoading && !state.isRestoring, modifier = Modifier.minimumInteractiveComponentSize()) {
                 Text(text = stringResource(id = R.string.backup_manage))
             }
         }

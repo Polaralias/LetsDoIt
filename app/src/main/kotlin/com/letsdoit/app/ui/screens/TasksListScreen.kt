@@ -22,6 +22,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -171,12 +172,12 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
                 }
             },
             confirmButton = {
-                TextButton(onClick = viewModel::acceptPreview) {
+                TextButton(onClick = viewModel::acceptPreview, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text(text = stringResource(id = R.string.action_add_items))
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::dismissPreview) {
+                TextButton(onClick = viewModel::dismissPreview, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text(text = stringResource(id = R.string.action_cancel))
                 }
             }
@@ -204,7 +205,12 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, capitalization = KeyboardCapitalization.Sentences),
                 keyboardActions = KeyboardActions(onDone = { addAction() })
             )
-            Button(onClick = addAction, modifier = Modifier.align(Alignment.End)) {
+            Button(
+                onClick = addAction,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .minimumInteractiveComponentSize()
+            ) {
                 Text(text = stringResource(id = R.string.action_add))
             }
             if (suggestions.isNotEmpty()) {
@@ -212,7 +218,8 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
                     suggestions.forEach { suggestion ->
                         androidx.compose.material3.AssistChip(
                             onClick = { onInputChange(suggestion) },
-                            label = { Text(text = suggestion) }
+                            label = { Text(text = suggestion) },
+                            modifier = Modifier.minimumInteractiveComponentSize()
                         )
                     }
                 }
@@ -245,6 +252,8 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
 
 private fun formatPreviewTime(value: Long): String {
     val instant = java.time.Instant.ofEpochMilli(value)
-    val formatter = java.time.format.DateTimeFormatter.ofPattern("dd MMM HH:mm").withZone(java.time.ZoneId.systemDefault())
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("dd MMM HH:mm")
+        .withLocale(java.util.Locale.UK)
+        .withZone(java.time.ZoneId.systemDefault())
     return formatter.format(instant)
 }
