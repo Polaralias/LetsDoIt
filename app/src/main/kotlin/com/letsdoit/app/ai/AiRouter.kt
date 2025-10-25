@@ -20,10 +20,12 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.CancellationException
 
 @Singleton
 class AiRouter @Inject constructor(
@@ -114,15 +116,25 @@ class AiRouter @Inject constructor(
             preprocessData = preprocessor.buildPrompt(input, settings, model, attempt, escalateReason, metadata)
             val timeout = if (escalate || highReasoning || preprocessData.prompt.heuristicEscalate) settings.timeoutEscalated else settings.timeoutMini
             val start = System.nanoTime()
-            val response = runCatching {
+            val response = try {
                 withTimeout(timeout) {
                     provider.parse(preprocessData.prompt)
                 }
-            }.getOrElse {
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Throwable) {
                 escalate = true
                 escalateReason = "timeout"
                 attempt += 1
-                metrics.record(AiCallMetric(providerId.name, model, (System.nanoTime() - start) / 1_000_000, false, escalate))
+                metrics.record(
+                    AiCallMetric(
+                        providerId.name,
+                        model,
+                        (System.nanoTime() - start) / 1_000_000,
+                        false,
+                        escalate,
+                    ),
+                )
                 continue
             }
             when (response) {
