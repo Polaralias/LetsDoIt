@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
@@ -21,6 +24,9 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.letsdoit.app.R
 import com.letsdoit.app.data.model.Task
+import com.letsdoit.app.data.model.Subtask
 import com.letsdoit.app.recurrence.Frequency
 import com.letsdoit.app.recurrence.RecurrenceRule
 import com.letsdoit.app.recurrence.WeekdaySpecifier
@@ -51,12 +58,17 @@ import java.util.Locale
 
 private data class ReminderChoice(val id: String, val label: String, val minutes: Int?)
 
+private val subtaskFormatter = DateTimeFormatter.ofPattern("dd MMM HH:mm").withZone(ZoneId.systemDefault())
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskDetailSheet(
     task: Task,
     onDismiss: () -> Unit,
-    onSave: (String?, Int?) -> Unit
+    onSave: (String?, Int?) -> Unit,
+    subtasks: List<Subtask>,
+    onToggleSubtask: (Subtask) -> Unit,
+    onMoveSubtask: (Int, Int) -> Unit
 ) {
     val zoneId = ZoneId.systemDefault()
     val presets = remember(task.id, task.dueAt) { recurrencePresets(zoneId, task.dueAt) }
@@ -142,6 +154,7 @@ fun TaskDetailSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(text = task.title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            SubtasksSection(subtasks = subtasks, onToggleSubtask = onToggleSubtask, onMoveSubtask = onMoveSubtask)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = stringResource(id = R.string.label_recurrence), style = MaterialTheme.typography.titleMedium)
                 if (previewDisplay != null) {
@@ -323,6 +336,55 @@ fun TaskDetailSheet(
                     enabled = !customReminderError
                 ) {
                     Text(text = stringResource(id = R.string.action_save))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubtasksSection(subtasks: List<Subtask>, onToggleSubtask: (Subtask) -> Unit, onMoveSubtask: (Int, Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = stringResource(id = R.string.title_subtasks), style = MaterialTheme.typography.titleMedium)
+        if (subtasks.isEmpty()) {
+            Text(text = stringResource(id = R.string.message_no_subtasks), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                subtasks.forEachIndexed { index, subtask ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Checkbox(checked = subtask.done, onCheckedChange = { onToggleSubtask(subtask) })
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = subtask.title, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            val start = subtask.startAt?.let { Instant.ofEpochMilli(it) }
+                            val duration = subtask.durationMinutes
+                            val due = subtask.dueAt?.let { Instant.ofEpochMilli(it) }
+                            when {
+                                start != null && duration != null -> {
+                                    val formatted = subtaskFormatter.format(start)
+                                    Text(
+                                        text = stringResource(id = R.string.preview_plan_item_timed, formatted, stringResource(id = R.string.subtask_duration_minutes, duration)),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                due != null -> {
+                                    Text(
+                                        text = subtaskFormatter.format(due),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            IconButton(onClick = { onMoveSubtask(index, (index - 1).coerceAtLeast(0)) }, enabled = index > 0) {
+                                Icon(imageVector = Icons.Filled.ArrowUpward, contentDescription = stringResource(id = R.string.action_move_up))
+                            }
+                            IconButton(onClick = { onMoveSubtask(index, (index + 1).coerceAtMost(subtasks.lastIndex)) }, enabled = index < subtasks.lastIndex) {
+                                Icon(imageVector = Icons.Filled.ArrowDownward, contentDescription = stringResource(id = R.string.action_move_down))
+                            }
+                        }
+                    }
                 }
             }
         }

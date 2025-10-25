@@ -11,6 +11,7 @@ import com.letsdoit.app.data.db.entities.SpaceEntity
 import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.model.Task
+import com.letsdoit.app.data.subtask.SubtaskRepository
 import com.letsdoit.app.reminders.ReminderCoordinator
 import java.time.Clock
 import java.time.Instant
@@ -79,7 +80,8 @@ class TaskRepositoryImpl @Inject constructor(
     private val listDao: ListDao,
     private val spaceDao: SpaceDao,
     private val clock: Clock,
-    private val reminderCoordinator: ReminderCoordinator
+    private val reminderCoordinator: ReminderCoordinator,
+    private val subtaskRepository: SubtaskRepository
 ) : TaskRepository {
     private val defaultListName = "Inbox"
     private val defaultSpaceName = "Everywhere"
@@ -246,6 +248,7 @@ class TaskRepositoryImpl @Inject constructor(
     override suspend fun deleteTask(taskId: Long) {
         taskDao.delete(taskId)
         taskOrderDao.deleteForTask(taskId)
+        subtaskRepository.deleteForTask(taskId)
         reminderCoordinator.onTaskDeleted(taskId)
     }
 

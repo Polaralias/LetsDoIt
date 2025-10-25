@@ -1,5 +1,7 @@
 package com.letsdoit.app.di
 
+import com.letsdoit.app.data.subtask.SubtaskRepository
+import com.letsdoit.app.data.subtask.SubtaskRepositoryImpl
 import com.letsdoit.app.data.task.TaskRepository
 import com.letsdoit.app.data.task.TaskRepositoryImpl
 import com.letsdoit.app.nlp.NaturalLanguageParser
@@ -17,6 +19,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindTaskRepository(impl: TaskRepositoryImpl): TaskRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSubtaskRepository(impl: SubtaskRepositoryImpl): SubtaskRepository
 
     companion object {
         @Provides

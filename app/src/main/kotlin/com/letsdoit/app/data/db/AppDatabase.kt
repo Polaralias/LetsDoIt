@@ -9,11 +9,13 @@ import com.letsdoit.app.data.db.dao.AlarmIndexDao
 import com.letsdoit.app.data.db.dao.FolderDao
 import com.letsdoit.app.data.db.dao.ListDao
 import com.letsdoit.app.data.db.dao.SpaceDao
+import com.letsdoit.app.data.db.dao.SubtaskDao
 import com.letsdoit.app.data.db.dao.TaskDao
 import com.letsdoit.app.data.db.dao.TaskOrderDao
 import com.letsdoit.app.data.db.entities.FolderEntity
 import com.letsdoit.app.data.db.entities.ListEntity
 import com.letsdoit.app.data.db.entities.SpaceEntity
+import com.letsdoit.app.data.db.entities.SubtaskEntity
 import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.db.entities.AlarmIndexEntity
@@ -24,10 +26,11 @@ import com.letsdoit.app.data.db.entities.AlarmIndexEntity
         FolderEntity::class,
         ListEntity::class,
         TaskEntity::class,
+        SubtaskEntity::class,
         TaskOrderEntity::class,
         AlarmIndexEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -38,6 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun taskOrderDao(): TaskOrderDao
     abstract fun alarmIndexDao(): AlarmIndexDao
+    abstract fun subtaskDao(): SubtaskDao
 }
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -60,5 +64,14 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
             "CREATE TABLE IF NOT EXISTS alarm_index (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, taskId INTEGER NOT NULL, nextFireAt INTEGER NOT NULL, rruleHash TEXT NOT NULL)"
         )
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_alarm_index_taskId ON alarm_index(taskId)")
+    }
+}
+
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS subtasks (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, parentTaskId INTEGER NOT NULL, title TEXT NOT NULL, done INTEGER NOT NULL, dueAt INTEGER, orderInParent INTEGER NOT NULL, startAt INTEGER, durationMinutes INTEGER, FOREIGN KEY(parentTaskId) REFERENCES tasks(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_subtasks_parentTaskId ON subtasks(parentTaskId)")
     }
 }
