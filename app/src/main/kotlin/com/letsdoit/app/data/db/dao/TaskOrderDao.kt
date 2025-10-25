@@ -15,6 +15,9 @@ interface TaskOrderDao {
     @Query("SELECT * FROM task_order WHERE column = :column ORDER BY orderInColumn")
     suspend fun listByColumn(column: String): List<TaskOrderEntity>
 
+    @Query("SELECT * FROM task_order")
+    suspend fun listAll(): List<TaskOrderEntity>
+
     @Query("SELECT * FROM task_order WHERE taskId = :taskId")
     suspend fun findForTask(taskId: Long): TaskOrderEntity?
 
