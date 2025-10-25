@@ -116,6 +116,12 @@ class SyncWorkerRetryInstrumentedTest {
         val workSpec = workManagerImpl.workDatabase.workSpecDao().getWorkSpec(workInfo.id.toString())
         assertIs<SyncReport.RateLimited>(statusRepository.lastReport)
         assertEquals(45_000L, workSpec.initialDelay)
+
+        val periodicInfos = workManager.getWorkInfosForUniqueWork(SyncWorker.WORK_NAME).get()
+        assertEquals(1, periodicInfos.size)
+        val periodicSpec = workManagerImpl.workDatabase.workSpecDao()
+            .getWorkSpec(periodicInfos.first().id.toString())
+        assertEquals(45_000L, periodicSpec.initialDelay)
     }
 
     private suspend fun seedTask() {
