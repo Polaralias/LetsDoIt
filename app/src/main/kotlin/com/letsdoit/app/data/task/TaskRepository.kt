@@ -40,6 +40,7 @@ interface TaskRepository {
     suspend fun moveTaskToColumn(taskId: Long, column: String, toIndex: Int)
     suspend fun setTimeline(taskId: Long, startAt: Long?, durationMinutes: Int?)
     suspend fun setPriority(taskId: Long, priority: Int)
+    suspend fun setDueDate(taskId: Long, dueAt: Instant?)
 }
 
 data class NewTask(
@@ -287,6 +288,12 @@ class TaskRepositoryImpl @Inject constructor(
     override suspend fun setPriority(taskId: Long, priority: Int) {
         val now = Instant.now(clock)
         taskDao.updatePriority(taskId, priority, now)
+    }
+
+    override suspend fun setDueDate(taskId: Long, dueAt: Instant?) {
+        val now = Instant.now(clock)
+        taskDao.updateDueDate(taskId, dueAt, now)
+        reminderCoordinator.onTaskSaved(taskId)
     }
 
     private fun TaskEntity.toModel(): Task = Task(
