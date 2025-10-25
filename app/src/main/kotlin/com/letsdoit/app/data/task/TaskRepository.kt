@@ -12,6 +12,8 @@ import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.model.Task
 import com.letsdoit.app.data.subtask.SubtaskRepository
+import com.letsdoit.app.data.sync.TaskSyncMeta
+import com.letsdoit.app.data.sync.TaskSyncStateManager
 import com.letsdoit.app.reminders.ReminderCoordinator
 import java.time.Clock
 import java.time.Instant
@@ -81,7 +83,8 @@ class TaskRepositoryImpl @Inject constructor(
     private val spaceDao: SpaceDao,
     private val clock: Clock,
     private val reminderCoordinator: ReminderCoordinator,
-    private val subtaskRepository: SubtaskRepository
+    private val subtaskRepository: SubtaskRepository,
+    private val taskSyncStateManager: TaskSyncStateManager = TaskSyncStateManager(database.taskSyncMetaDao())
 ) : TaskRepository {
     private val defaultListName = "Inbox"
     private val defaultSpaceName = "Everywhere"
@@ -134,6 +137,7 @@ class TaskRepositoryImpl @Inject constructor(
         )
         val taskId = taskDao.upsert(entity)
         reminderCoordinator.onTaskSaved(taskId)
+        markTaskDirty(taskId)
         return taskId
     }
 
@@ -169,6 +173,7 @@ class TaskRepositoryImpl @Inject constructor(
                     )
                     val taskId = taskDao.upsert(entity)
                     createdIds[entry.index] = taskId
+                    markTaskDirty(taskId)
                     val orderInColumn = columnCounts.getOrPut(column) {
                         taskOrderDao.listByColumn(column).size
                     }
@@ -234,6 +239,7 @@ class TaskRepositoryImpl @Inject constructor(
         )
         taskDao.upsert(entity)
         reminderCoordinator.onTaskSaved(task.id)
+        markTaskDirty(task.id)
     }
 
     override suspend fun updateCompletion(taskId: Long, completed: Boolean) {
@@ -243,6 +249,7 @@ class TaskRepositoryImpl @Inject constructor(
             taskDao.updateCompletion(taskId, false, Instant.now(clock))
             reminderCoordinator.onTaskSaved(taskId)
         }
+        markTaskDirty(taskId)
     }
 
     override suspend fun deleteTask(taskId: Long) {
@@ -250,6 +257,7 @@ class TaskRepositoryImpl @Inject constructor(
         taskOrderDao.deleteForTask(taskId)
         subtaskRepository.deleteForTask(taskId)
         reminderCoordinator.onTaskDeleted(taskId)
+        taskSyncStateManager.reset(taskId)
     }
 
     override suspend fun getTask(taskId: Long): Task? {
@@ -260,6 +268,7 @@ class TaskRepositoryImpl @Inject constructor(
         val now = Instant.now(clock)
         ids.forEachIndexed { index, id ->
             taskDao.updateOrderInList(id, index, now)
+            markTaskDirty(id)
         }
     }
 
@@ -277,16 +286,19 @@ class TaskRepositoryImpl @Inject constructor(
         targetOrders.add(index, entry)
         taskOrderDao.rewrite(column, targetOrders)
         taskDao.updateColumn(taskId, column, now)
+        markTaskDirty(taskId)
     }
 
     override suspend fun setTimeline(taskId: Long, startAt: Long?, durationMinutes: Int?) {
         val now = Instant.now(clock)
         taskDao.updateTimeline(taskId, startAt, durationMinutes, now)
+        markTaskDirty(taskId)
     }
 
     override suspend fun setPriority(taskId: Long, priority: Int) {
         val now = Instant.now(clock)
         taskDao.updatePriority(taskId, priority, now)
+        markTaskDirty(taskId)
     }
 
     private fun TaskEntity.toModel(): Task = Task(
@@ -315,5 +327,24 @@ class TaskRepositoryImpl @Inject constructor(
         }
         spaceDao.upsert(SpaceEntity(name = defaultSpaceName))
         return spaceDao.findByName(defaultSpaceName) ?: SpaceEntity(name = defaultSpaceName)
+    }
+
+    private suspend fun markTaskDirty(taskId: Long) {
+        val existing = taskSyncStateManager.find(taskId)
+        if (existing == null) {
+            taskSyncStateManager.save(
+                TaskSyncMeta(
+                    taskId = taskId,
+                    remoteId = null,
+                    etag = null,
+                    needsPush = true,
+                    lastSyncedAt = null,
+                    lastPulledAt = null,
+                    lastPushedAt = null
+                )
+            )
+        } else {
+            taskSyncStateManager.markNeedsPush(taskId)
+        }
     }
 }
