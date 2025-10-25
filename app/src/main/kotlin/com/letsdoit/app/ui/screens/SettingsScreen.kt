@@ -1,5 +1,6 @@
 package com.letsdoit.app.ui.screens
 
+import android.content.Intent
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,6 +30,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +62,8 @@ import com.letsdoit.app.data.sync.SyncStatus
 import com.letsdoit.app.ui.theme.CardFamily
 import com.letsdoit.app.ui.theme.PaletteFamily
 import com.letsdoit.app.ui.viewmodel.AccentGenerationError
+import com.letsdoit.app.ui.viewmodel.DiagnosticsEvent
+import com.letsdoit.app.ui.viewmodel.DiagnosticsExportError
 import com.letsdoit.app.ui.viewmodel.SettingsViewModel
 import java.io.File
 import java.time.ZoneId
@@ -84,6 +88,7 @@ fun SettingsScreen(
     val syncStatus by viewModel.syncStatus.collectAsState()
     val resetTaskId by viewModel.resetTaskId.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
+    val diagnosticsState by viewModel.diagnosticsState.collectAsState()
     val presets = viewModel.presets
     val accentPromptPresets = viewModel.accentPromptPresets
     val formatter = remember {
@@ -93,6 +98,29 @@ fun SettingsScreen(
     }
     val showRestoreConfirm = remember { mutableStateOf(false) }
     val showManageDialog = remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val shareTitle = stringResource(id = R.string.diagnostics_share_title)
+    val shareSubject = stringResource(id = R.string.diagnostics_share_subject)
+
+    LaunchedEffect(viewModel, shareTitle, shareSubject) {
+        viewModel.diagnosticsEvents.collect { event ->
+            when (event) {
+                is DiagnosticsEvent.Share -> {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/zip"
+                        putExtra(Intent.EXTRA_SUBJECT, shareSubject)
+                        putExtra(Intent.EXTRA_STREAM, event.bundle.uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    runCatching {
+                        context.startActivity(Intent.createChooser(intent, shareTitle))
+                    }.onFailure {
+                        viewModel.onDiagnosticsShareFailed()
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -136,6 +164,36 @@ fun SettingsScreen(
         )
         Button(onClick = { viewModel.saveOpenAiKey() }, modifier = Modifier.minimumInteractiveComponentSize()) {
             Text(text = stringResource(id = R.string.action_save))
+        }
+        Text(text = stringResource(id = R.string.diagnostics_title), style = MaterialTheme.typography.titleMedium)
+        ThemeToggleRow(
+            text = stringResource(id = R.string.diagnostics_enable),
+            checked = diagnosticsState.enabled,
+            onToggle = viewModel::setDiagnosticsEnabled,
+            description = stringResource(id = R.string.accessibility_toggle_diagnostics)
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(
+                onClick = { viewModel.exportDiagnostics() },
+                enabled = diagnosticsState.enabled && !diagnosticsState.isExporting,
+                modifier = Modifier.minimumInteractiveComponentSize()
+            ) {
+                Text(text = stringResource(id = R.string.diagnostics_export))
+            }
+            if (diagnosticsState.isExporting) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        }
+        diagnosticsState.error?.let { error ->
+            val message = when (error) {
+                DiagnosticsExportError.Disabled -> stringResource(id = R.string.diagnostics_error_disabled)
+                DiagnosticsExportError.Failed -> stringResource(id = R.string.diagnostics_error_failed)
+            }
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
         Text(text = stringResource(id = R.string.label_theme), style = MaterialTheme.typography.titleMedium)
         Text(text = stringResource(id = R.string.label_theme_presets), style = MaterialTheme.typography.bodyMedium)

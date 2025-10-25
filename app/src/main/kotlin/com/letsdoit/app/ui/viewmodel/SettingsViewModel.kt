@@ -18,6 +18,8 @@ import com.letsdoit.app.data.sync.SyncStatus
 import com.letsdoit.app.data.sync.SyncStatusRepository
 import com.letsdoit.app.data.sync.TaskSyncStateManager
 import com.letsdoit.app.security.SecurePrefs
+import com.letsdoit.app.diagnostics.DiagnosticsBundle
+import com.letsdoit.app.diagnostics.DiagnosticsManager
 import com.letsdoit.app.ui.theme.AccentManager
 import com.letsdoit.app.ui.theme.AccentPackDescriptor
 import com.letsdoit.app.ui.theme.CardFamily
@@ -26,10 +28,13 @@ import com.letsdoit.app.ui.theme.PresetProvider
 import com.letsdoit.app.ui.theme.ThemeConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,6 +65,21 @@ data class AccentGenerationState(
     val error: AccentGenerationError? = null
 )
 
+data class DiagnosticsUiState(
+    val enabled: Boolean = false,
+    val isExporting: Boolean = false,
+    val error: DiagnosticsExportError? = null
+)
+
+enum class DiagnosticsExportError {
+    Disabled,
+    Failed
+}
+
+sealed class DiagnosticsEvent {
+    data class Share(val bundle: DiagnosticsBundle) : DiagnosticsEvent()
+}
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val securePrefs: SecurePrefs,
@@ -70,7 +90,8 @@ class SettingsViewModel @Inject constructor(
     private val syncStatusRepository: SyncStatusRepository,
     private val taskSyncStateManager: TaskSyncStateManager,
     private val backupManager: BackupManager,
-    backupStatusRepository: BackupStatusRepository
+    backupStatusRepository: BackupStatusRepository,
+    private val diagnosticsManager: DiagnosticsManager
 ) : ViewModel() {
     private val _clickUpToken = MutableStateFlow(securePrefs.read("clickup_token") ?: "")
     val clickUpToken: StateFlow<String> = _clickUpToken.asStateFlow()
@@ -120,6 +141,12 @@ class SettingsViewModel @Inject constructor(
     private val _backupState = MutableStateFlow(BackupUiState())
     val backupState: StateFlow<BackupUiState> = _backupState.asStateFlow()
 
+    private val _diagnosticsState = MutableStateFlow(DiagnosticsUiState())
+    val diagnosticsState: StateFlow<DiagnosticsUiState> = _diagnosticsState.asStateFlow()
+
+    private val _diagnosticsEvents = MutableSharedFlow<DiagnosticsEvent>(extraBufferCapacity = 1)
+    val diagnosticsEvents = _diagnosticsEvents.asSharedFlow()
+
     init {
         loadAccentPacks()
         viewModelScope.launch {
@@ -127,6 +154,11 @@ class SettingsViewModel @Inject constructor(
                 _backupState.update { state ->
                     state.copy(lastSuccessAt = status.lastSuccessAt, lastError = status.lastError)
                 }
+            }
+        }
+        viewModelScope.launch {
+            preferencesRepository.diagnosticsEnabled.collectLatest { enabled ->
+                _diagnosticsState.update { state -> state.copy(enabled = enabled, error = null) }
             }
         }
         refreshBackups()
@@ -200,6 +232,35 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun setDiagnosticsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            _diagnosticsState.update { state -> state.copy(error = null) }
+            preferencesRepository.updateDiagnosticsEnabled(enabled)
+        }
+    }
+
+    fun exportDiagnostics() {
+        viewModelScope.launch {
+            val enabled = _diagnosticsState.value.enabled
+            if (!enabled) {
+                _diagnosticsState.update { state -> state.copy(error = DiagnosticsExportError.Disabled) }
+                return@launch
+            }
+            _diagnosticsState.update { state -> state.copy(isExporting = true, error = null) }
+            val bundle = diagnosticsManager.createSupportBundle()
+            if (bundle == null) {
+                _diagnosticsState.update { state -> state.copy(isExporting = false, error = DiagnosticsExportError.Failed) }
+            } else {
+                _diagnosticsState.update { state -> state.copy(isExporting = false, error = null) }
+                _diagnosticsEvents.emit(DiagnosticsEvent.Share(bundle))
+            }
+        }
+    }
+
+    fun onDiagnosticsShareFailed() {
+        _diagnosticsState.update { state -> state.copy(error = DiagnosticsExportError.Failed) }
     }
 
     fun onResetTaskIdChanged(value: String) {
