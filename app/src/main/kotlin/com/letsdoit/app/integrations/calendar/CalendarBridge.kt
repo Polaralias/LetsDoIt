@@ -31,14 +31,17 @@ class CalendarBridge @Inject constructor(@ApplicationContext private val context
 
     fun update(eventId: Long, title: String, start: Instant, end: Instant? = null, timezoneId: String? = null): Boolean {
         val values = ContentValues().apply {
+            val zone = timezoneId ?: TimeZone.getDefault().id
             put(CalendarContract.Events.TITLE, title)
             put(CalendarContract.Events.DTSTART, start.toEpochMilli())
-            put(CalendarContract.Events.EVENT_TIMEZONE, timezoneId ?: TimeZone.getDefault().id)
+            put(CalendarContract.Events.EVENT_TIMEZONE, zone)
             if (end != null) {
                 put(CalendarContract.Events.DTEND, end.toEpochMilli())
+                put(CalendarContract.Events.EVENT_END_TIMEZONE, zone)
                 putNull(CalendarContract.Events.DURATION)
             } else {
                 putNull(CalendarContract.Events.DTEND)
+                putNull(CalendarContract.Events.EVENT_END_TIMEZONE)
                 put(CalendarContract.Events.DURATION, "PT30M")
             }
         }
