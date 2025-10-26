@@ -16,6 +16,7 @@ import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.model.Task
 import com.letsdoit.app.data.subtask.SubtaskRepository
+import com.letsdoit.app.integrations.calendar.CalendarBridge
 import com.letsdoit.app.reminders.ReminderCoordinator
 import java.time.Clock
 import java.time.Instant
@@ -49,6 +50,8 @@ interface TaskRepository {
     suspend fun setTimeline(taskId: Long, startAt: Long?, durationMinutes: Int?)
     suspend fun setPriority(taskId: Long, priority: Int)
     suspend fun setDueDate(taskId: Long, dueAt: Instant?)
+    suspend fun linkCalendarEvent(taskId: Long, calendarEventId: Long)
+    suspend fun removeFromCalendar(taskId: Long)
 }
 
 data class NewTask(
@@ -90,7 +93,8 @@ class TaskRepositoryImpl @Inject constructor(
     private val spaceDao: SpaceDao,
     private val clock: Clock,
     private val reminderCoordinator: ReminderCoordinator,
-    private val subtaskRepository: SubtaskRepository
+    private val subtaskRepository: SubtaskRepository,
+    private val calendarBridge: CalendarBridge
 ) : TaskRepository {
     private val defaultListName = "Inbox"
     private val defaultSpaceName = "Everywhere"
@@ -246,6 +250,7 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateTask(task: Task) {
+        val previous = taskDao.getById(task.id)?.toModel()
         val entity = TaskEntity(
             id = task.id,
             listId = task.listId,
@@ -265,6 +270,7 @@ class TaskRepositoryImpl @Inject constructor(
             column = task.column
         )
         taskDao.upsert(entity)
+        handleCalendarChange(previous, entity.toModel())
         reminderCoordinator.onTaskSaved(task.id)
     }
 
@@ -278,6 +284,8 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteTask(taskId: Long) {
+        val existing = taskDao.getById(taskId)
+        existing?.calendarEventId?.let { calendarBridge.delete(it) }
         taskDao.delete(taskId)
         taskOrderDao.deleteForTask(taskId)
         subtaskRepository.deleteForTask(taskId)
@@ -313,7 +321,12 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun setTimeline(taskId: Long, startAt: Long?, durationMinutes: Int?) {
         val now = Instant.now(clock)
+        val previous = taskDao.getById(taskId)?.toModel()
         taskDao.updateTimeline(taskId, startAt, durationMinutes, now)
+        val current = taskDao.getById(taskId)?.toModel()
+        if (current != null) {
+            handleCalendarChange(previous, current)
+        }
     }
 
     override suspend fun setPriority(taskId: Long, priority: Int) {
@@ -323,8 +336,31 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun setDueDate(taskId: Long, dueAt: Instant?) {
         val now = Instant.now(clock)
+        val previous = taskDao.getById(taskId)?.toModel()
         taskDao.updateDueDate(taskId, dueAt, now)
+        val current = taskDao.getById(taskId)?.toModel()
+        if (current != null) {
+            handleCalendarChange(previous, current)
+        }
         reminderCoordinator.onTaskSaved(taskId)
+    }
+
+    override suspend fun linkCalendarEvent(taskId: Long, calendarEventId: Long) {
+        val previous = taskDao.getById(taskId)?.toModel() ?: return
+        val now = Instant.now(clock)
+        if (previous.calendarEventId != null && previous.calendarEventId != calendarEventId) {
+            calendarBridge.delete(previous.calendarEventId)
+        }
+        taskDao.updateCalendarEvent(taskId, calendarEventId, now)
+        val current = taskDao.getById(taskId)?.toModel() ?: return
+        handleCalendarChange(previous, current)
+    }
+
+    override suspend fun removeFromCalendar(taskId: Long) {
+        val existing = taskDao.getById(taskId) ?: return
+        val eventId = existing.calendarEventId ?: return
+        calendarBridge.delete(eventId)
+        taskDao.updateCalendarEvent(taskId, null, Instant.now(clock))
     }
 
     private fun TaskEntity.toModel(): Task = Task(
@@ -345,6 +381,40 @@ class TaskRepositoryImpl @Inject constructor(
         calendarEventId = calendarEventId,
         column = column
     )
+
+    private fun handleCalendarChange(previous: Task?, current: Task) {
+        val previousEventId = previous?.calendarEventId
+        val currentEventId = current.calendarEventId
+        if (previousEventId != null && currentEventId == null) {
+            calendarBridge.delete(previousEventId)
+            return
+        }
+        if (currentEventId != null) {
+            if (previousEventId != null && previousEventId != currentEventId) {
+                calendarBridge.delete(previousEventId)
+            }
+            val times = calculateEventTimes(current) ?: return
+            val changed = previousEventId == null ||
+                previousEventId != currentEventId ||
+                previous?.title != current.title ||
+                previous?.dueAt != current.dueAt ||
+                previous?.startAt != current.startAt ||
+                previous?.durationMinutes != current.durationMinutes
+            if (changed) {
+                calendarBridge.update(currentEventId, current.title, times.first, times.second)
+            }
+        }
+    }
+
+    private fun calculateEventTimes(task: Task): Pair<Instant, Instant?>? {
+        val start = task.startAt ?: task.dueAt ?: return null
+        val end = when {
+            task.durationMinutes != null -> start.plusSeconds(task.durationMinutes.toLong() * 60)
+            task.startAt != null && task.dueAt != null && task.dueAt.isAfter(start) -> task.dueAt
+            else -> null
+        }
+        return start to end
+    }
 
     private suspend fun ensureDefaultSpace(): SpaceEntity {
         val existing = spaceDao.findByName(defaultSpaceName)

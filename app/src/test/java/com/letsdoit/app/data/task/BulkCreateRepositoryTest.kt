@@ -6,8 +6,13 @@ import androidx.test.core.app.ApplicationProvider
 import com.letsdoit.app.data.db.AppDatabase
 import com.letsdoit.app.data.db.entities.ListEntity
 import com.letsdoit.app.data.db.entities.SpaceEntity
+import com.letsdoit.app.data.subtask.SubtaskRepositoryImpl
+import com.letsdoit.app.integrations.alarm.AlarmScheduler
+import com.letsdoit.app.integrations.calendar.CalendarBridge
+import com.letsdoit.app.reminders.ReminderCoordinator
 import java.time.Clock
 import java.time.ZoneOffset
+import java.time.Instant
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,13 +30,27 @@ class BulkCreateRepositoryTest {
             .allowMainThreadQueries()
             .build()
         val clock = Clock.system(ZoneOffset.UTC)
+        val reminderCoordinator = ReminderCoordinator(
+            object : AlarmScheduler {
+                override fun schedule(taskId: Long, triggerAt: Instant, title: String) = Unit
+                override fun cancel(taskId: Long) = Unit
+            },
+            database.alarmIndexDao(),
+            database.taskDao(),
+            clock
+        )
+        val subtaskRepository = SubtaskRepositoryImpl(database, database.subtaskDao())
+        val calendarBridge = CalendarBridge(context)
         repository = TaskRepositoryImpl(
             database = database,
             taskDao = database.taskDao(),
             taskOrderDao = database.taskOrderDao(),
             listDao = database.listDao(),
             spaceDao = database.spaceDao(),
-            clock = clock
+            clock = clock,
+            reminderCoordinator = reminderCoordinator,
+            subtaskRepository = subtaskRepository,
+            calendarBridge = calendarBridge
         )
         runBlocking {
             database.spaceDao().upsert(SpaceEntity(id = 1, name = "Work"))

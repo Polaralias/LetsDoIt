@@ -69,7 +69,10 @@ class TasksListViewModel @Inject constructor(
             )
             val taskId = taskRepository.addTask(newTask)
             parsed.dueAt?.let { due ->
-                calendarBridge.insertEvent(parsed.title, due)
+                val eventId = calendarBridge.insertEvent(parsed.title, due)
+                if (eventId != null) {
+                    taskRepository.linkCalendarEvent(taskId, eventId)
+                }
             }
             _suggestions.value = emptyList()
             _input.value = ""
@@ -86,6 +89,12 @@ class TasksListViewModel @Inject constructor(
     fun remove(task: Task) {
         viewModelScope.launch {
             taskRepository.deleteTask(task.id)
+        }
+    }
+
+    fun removeFromCalendar(taskId: Long) {
+        viewModelScope.launch {
+            taskRepository.removeFromCalendar(taskId)
         }
     }
 

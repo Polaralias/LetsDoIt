@@ -106,7 +106,11 @@ fun TasksListScreen(onOpenSettings: () -> Unit = {}, viewModel: TasksListViewMod
             },
             subtasks = subtasks,
             onToggleSubtask = viewModel::onToggleSubtask,
-            onMoveSubtask = { from, to -> viewModel.onMoveSubtask(current.id, from, to) }
+            onMoveSubtask = { from, to -> viewModel.onMoveSubtask(current.id, from, to) },
+            onRemoveFromCalendar = {
+                viewModel.removeFromCalendar(current.id)
+                selectedTaskId.value = null
+            }
         )
     }
 

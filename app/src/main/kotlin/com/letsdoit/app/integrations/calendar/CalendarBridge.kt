@@ -29,6 +29,30 @@ class CalendarBridge @Inject constructor(@ApplicationContext private val context
         return ContentUris.parseId(uri)
     }
 
+    fun update(eventId: Long, title: String, start: Instant, end: Instant? = null, timezoneId: String? = null): Boolean {
+        val values = ContentValues().apply {
+            put(CalendarContract.Events.TITLE, title)
+            put(CalendarContract.Events.DTSTART, start.toEpochMilli())
+            put(CalendarContract.Events.EVENT_TIMEZONE, timezoneId ?: TimeZone.getDefault().id)
+            if (end != null) {
+                put(CalendarContract.Events.DTEND, end.toEpochMilli())
+                putNull(CalendarContract.Events.DURATION)
+            } else {
+                putNull(CalendarContract.Events.DTEND)
+                put(CalendarContract.Events.DURATION, "PT30M")
+            }
+        }
+        val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId)
+        val rows = context.contentResolver.update(uri, values, null, null)
+        return rows > 0
+    }
+
+    fun delete(eventId: Long): Boolean {
+        val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId)
+        val rows = context.contentResolver.delete(uri, null, null)
+        return rows > 0
+    }
+
     private fun findPrimaryCalendarId(): Long? {
         val resolver = context.contentResolver
         val projection = arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.IS_PRIMARY)
