@@ -53,6 +53,8 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+
+    sourceSets["main"].assets.srcDir("../prompts")
 }
 
 dependencies {
