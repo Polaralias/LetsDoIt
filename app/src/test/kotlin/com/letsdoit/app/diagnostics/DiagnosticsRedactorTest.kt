@@ -41,4 +41,14 @@ class DiagnosticsRedactorTest {
         assertTrue(output.contains("[REDACTED]"))
         assertTrue(output.contains("[REDACTED_PROMPT]"))
     }
+
+    @Test
+    fun redactsBackupKeys() {
+        val input = "backup_key=ZW5jb2RlZA==\n{\"backup_key\":\"YW5vdGhlcg==\"}"
+        val output = redactor.redact(input)
+        assertTrue(output.contains("backup_key=[REDACTED]"))
+        assertTrue(output.contains("\"backup_key\":\"[REDACTED]\""))
+        assertFalse(output.contains("ZW5jb2RlZA=="))
+        assertFalse(output.contains("YW5vdGhlcg=="))
+    }
 }
