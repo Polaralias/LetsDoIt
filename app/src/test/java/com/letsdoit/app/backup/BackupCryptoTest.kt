@@ -3,11 +3,13 @@ package com.letsdoit.app.backup
 import com.squareup.moshi.Moshi
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.util.Base64
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.text.Charsets
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BackupCryptoTest {
@@ -96,6 +98,20 @@ class BackupCryptoTest {
         val (parsedManifest, parsedSnapshot) = unpack(decrypted)
         assertEquals(manifest, parsedManifest)
         assertEquals(snapshot, parsedSnapshot)
+    }
+
+    @Test
+    fun usesFreshNonceForEachBackup() {
+        val nonces = mutableSetOf<String>()
+        repeat(1000) { index ->
+            val plain = "payload-$index".toByteArray()
+            val encrypted = crypto.encrypt(plain)
+            val nonce = encrypted.copyOfRange(0, 12)
+            assertEquals(12, nonce.size)
+            val encoded = Base64.getEncoder().encodeToString(nonce)
+            assertTrue(nonces.add(encoded))
+        }
+        assertEquals(1000, nonces.size)
     }
 
     private fun pack(manifest: BackupManifest, snapshot: BackupSnapshot): ByteArray {
