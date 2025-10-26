@@ -1,10 +1,15 @@
 package com.letsdoit.app.share
 
+import android.util.Base64
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.letsdoit.app.data.db.dao.SharedListDao
+import com.letsdoit.app.data.db.entities.SharedListEntity
 import com.letsdoit.app.security.SecurePrefs
+import com.letsdoit.app.share.crdt.SharedListMaterialisedState
+import com.letsdoit.app.share.sync.SharedListSyncManager
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import javax.inject.Inject
@@ -18,6 +23,8 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class ShareRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
+    private val sharedListDao: SharedListDao,
+    private val syncManager: SharedListSyncManager,
     securePrefs: SecurePrefs,
     moshi: Moshi
 ) {
@@ -25,14 +32,15 @@ class ShareRepository @Inject constructor(
     private val driveKey = stringPreferencesKey("share_drive_state")
     private val nearbyKey = stringPreferencesKey("share_nearby_state")
     private val inviteKey = stringPreferencesKey("share_last_invite")
-    private val sharedKey = stringPreferencesKey("share_joined_lists")
     private val driveAccountAdapter: JsonAdapter<DriveState> = moshi.adapter(DriveState::class.java)
     private val nearbyAdapter: JsonAdapter<NearbyState> = moshi.adapter(NearbyState::class.java)
     private val inviteAdapter: JsonAdapter<ShareInvite> = moshi.adapter(ShareInvite::class.java)
-    private val listAdapter: JsonAdapter<List<SharedList>> = moshi.adapter(Types.sharedListType)
     private val tokenKey = "share_drive_token"
     private val tokenState = MutableStateFlow(securePrefs.read(tokenKey))
     private val secureStore = securePrefs
+    private val sharedListsFlow: Flow<List<SharedList>> = sharedListDao.observeSharedLists().map { entities ->
+        entities.map { it.toDomain() }
+    }
 
     val shareState: Flow<ShareState> = combine(
         dataStore.data.map { preferences ->
@@ -46,20 +54,18 @@ class ShareRepository @Inject constructor(
             val invite = preferences[inviteKey]?.let { value ->
                 runCatching { inviteAdapter.fromJson(value) }.getOrNull()
             }
-            val shared = preferences[sharedKey]?.let { value ->
-                runCatching { listAdapter.fromJson(value) }.getOrNull()
-            } ?: emptyList()
             ShareState(
                 selectedTransport = transport,
                 drive = driveState,
                 nearby = nearbyState,
                 lastInvite = invite,
-                sharedLists = shared
+                sharedLists = emptyList()
             )
         },
-        tokenState
-    ) { state, token ->
-        state.copy(driveToken = token)
+        tokenState,
+        sharedListsFlow
+    ) { state, token, lists ->
+        state.copy(driveToken = token, sharedLists = lists)
     }
 
     suspend fun selectTransport(transport: ShareTransport) {
@@ -115,24 +121,33 @@ class ShareRepository @Inject constructor(
         }
     }
 
-    suspend fun addSharedList(sharedList: SharedList) {
-        dataStore.edit { preferences ->
-            val existing = preferences[sharedKey]?.let { value ->
-                runCatching { listAdapter.fromJson(value) }.getOrNull()
-            } ?: emptyList()
-            preferences[sharedKey] = listAdapter.toJson(existing + sharedList)
-        }
+    suspend fun createSharedList(listId: Long, transport: ShareTransport): SharedList {
+        val entity = syncManager.createShare(listId, transport)
+        return entity.toDomain()
+    }
+
+    suspend fun joinSharedList(listId: Long, shareId: String, key: ByteArray, transport: ShareTransport): SharedList {
+        val entity = syncManager.joinShare(listId, shareId, key, transport)
+        return entity.toDomain()
+    }
+
+    suspend fun syncSharedList(listId: Long) {
+        syncManager.sync(listId)
+    }
+
+    suspend fun materialiseSharedList(listId: Long): SharedListMaterialisedState {
+        return syncManager.materialise(listId)
     }
 
     suspend fun clearAll() {
         secureStore.clear(tokenKey)
         tokenState.value = null
+        syncManager.reset()
         dataStore.edit { preferences ->
             preferences.remove(transportKey)
             preferences.remove(driveKey)
             preferences.remove(nearbyKey)
             preferences.remove(inviteKey)
-            preferences.remove(sharedKey)
         }
     }
 
@@ -152,7 +167,15 @@ class ShareRepository @Inject constructor(
 
     fun driveToken(): String? = tokenState.value
 
-    private object Types {
-        val sharedListType = com.squareup.moshi.Types.newParameterizedType(List::class.java, SharedList::class.java)
+    private fun SharedListEntity.toDomain(): SharedList {
+        val keyString = Base64.encodeToString(encKey, Base64.NO_WRAP)
+        return SharedList(
+            listId = listId,
+            shareId = shareId,
+            transport = ShareTransport.valueOf(transport),
+            key = keyString,
+            driveFolderId = null,
+            joinedAt = createdAt
+        )
     }
 }

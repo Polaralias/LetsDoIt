@@ -6,6 +6,8 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.letsdoit.app.data.db.dao.AlarmIndexDao
+import com.letsdoit.app.data.db.dao.CrdtEventDao
+import com.letsdoit.app.data.db.dao.EventAckDao
 import com.letsdoit.app.data.db.dao.FolderDao
 import com.letsdoit.app.data.db.dao.ListDao
 import com.letsdoit.app.data.db.dao.SpaceDao
@@ -13,6 +15,7 @@ import com.letsdoit.app.data.db.dao.SubtaskDao
 import com.letsdoit.app.data.db.dao.TaskDao
 import com.letsdoit.app.data.db.dao.TaskOrderDao
 import com.letsdoit.app.data.db.dao.TaskSyncMetaDao
+import com.letsdoit.app.data.db.dao.SharedListDao
 import com.letsdoit.app.data.db.dao.TranscriptSessionDao
 import com.letsdoit.app.data.db.entities.FolderEntity
 import com.letsdoit.app.data.db.entities.ListEntity
@@ -22,9 +25,12 @@ import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
 import com.letsdoit.app.data.db.entities.TaskSyncMetaEntity
 import com.letsdoit.app.data.db.entities.AlarmIndexEntity
+import com.letsdoit.app.data.db.entities.CrdtEventEntity
+import com.letsdoit.app.data.db.entities.EventAckEntity
 import com.letsdoit.app.data.db.entities.SubtaskFtsEntity
 import com.letsdoit.app.data.db.entities.TaskFtsEntity
 import com.letsdoit.app.data.db.entities.TranscriptSessionEntity
+import com.letsdoit.app.data.db.entities.SharedListEntity
 
 @Database(
     entities = [
@@ -38,9 +44,12 @@ import com.letsdoit.app.data.db.entities.TranscriptSessionEntity
         TaskSyncMetaEntity::class,
         TaskFtsEntity::class,
         SubtaskFtsEntity::class,
-        TranscriptSessionEntity::class
+        TranscriptSessionEntity::class,
+        SharedListEntity::class,
+        CrdtEventEntity::class,
+        EventAckEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -54,6 +63,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun alarmIndexDao(): AlarmIndexDao
     abstract fun subtaskDao(): SubtaskDao
     abstract fun transcriptSessionDao(): TranscriptSessionDao
+    abstract fun sharedListDao(): SharedListDao
+    abstract fun crdtEventDao(): CrdtEventDao
+    abstract fun eventAckDao(): EventAckDao
 }
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -142,5 +154,22 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
 val MIGRATION_7_8 = object : Migration(7, 8) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE task_sync_meta ADD COLUMN remoteUpdatedAt INTEGER")
+    }
+}
+
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS shared_lists (shareId TEXT NOT NULL PRIMARY KEY, listId INTEGER NOT NULL, encKey BLOB NOT NULL, transport TEXT NOT NULL, createdAt INTEGER NOT NULL, FOREIGN KEY(listId) REFERENCES lists(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_shared_lists_listId ON shared_lists(listId)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS crdt_events (id TEXT NOT NULL PRIMARY KEY, listId INTEGER NOT NULL, authorDeviceId TEXT NOT NULL, lamport INTEGER NOT NULL, timestamp INTEGER NOT NULL, type TEXT NOT NULL, payloadJson TEXT NOT NULL, applied INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(listId) REFERENCES lists(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_crdt_events_listId_lamport ON crdt_events(listId, lamport, authorDeviceId, id)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS event_acks (id TEXT NOT NULL PRIMARY KEY, listId INTEGER NOT NULL, acknowledgedAt INTEGER NOT NULL, FOREIGN KEY(listId) REFERENCES lists(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_event_acks_listId ON event_acks(listId)")
     }
 }
