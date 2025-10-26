@@ -2,6 +2,7 @@ package com.letsdoit.app.backup
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.letsdoit.app.security.SecurePrefs
 import java.io.File
 import java.util.Base64
@@ -10,7 +11,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class SecureBackupKeyStoreTest {
     private lateinit var context: Context
 
