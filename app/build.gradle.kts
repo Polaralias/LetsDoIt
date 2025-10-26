@@ -54,6 +54,16 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
+    lint {
+        warningsAsErrors = true
+        enable += setOf(
+            "IconMissingContentDescription",
+            "LabelFor",
+            "TouchTargetSizeCheck",
+            "SpeakableTextPresentCheck"
+        )
+    }
+
     sourceSets["main"].assets.srcDir("../prompts")
 }
 

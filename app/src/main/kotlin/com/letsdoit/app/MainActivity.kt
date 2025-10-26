@@ -64,6 +64,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleIntent(intent)
+        val fontScaleOverride = intent?.getFloatExtra(AppIntentExtras.FONT_SCALE_OVERRIDE, 0f)
+            ?.takeIf { it >= 0.5f }
         setContent {
             val theme by viewModel.theme.collectAsState()
             val searchState by searchViewModel.uiState.collectAsState()
@@ -74,7 +76,7 @@ class MainActivity : ComponentActivity() {
                 AppDestination(Destinations.Buckets.route, stringResource(id = R.string.nav_buckets), Icons.Outlined.AutoAwesomeMosaic),
                 AppDestination(Destinations.Settings.route, stringResource(id = R.string.nav_settings), Icons.Filled.Settings)
             )
-            AppTheme(config = theme) {
+            AppTheme(config = theme, fontScaleOverride = fontScaleOverride) {
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route ?: Destinations.List.route
                 Scaffold(

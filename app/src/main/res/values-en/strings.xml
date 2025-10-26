@@ -151,6 +151,7 @@
     <string name="action_move_to">Move to…</string>
     <string name="action_move_to_title">Move “%1$s”</string>
     <string name="action_move_to_position">Position %1$d</string>
+    <string name="accessibility_subtask_reorder_handle">Drag handle for “%1$s”</string>
     <string name="action_reorder_up">Reorder up</string>
     <string name="action_reorder_down">Reorder down</string>
     <plurals name="subtask_duration_minutes">

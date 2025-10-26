@@ -16,22 +16,40 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 
 val LocalThemeConfig = staticCompositionLocalOf { ThemeConfig.Default }
 
 @Composable
-fun AppTheme(config: ThemeConfig = ThemeConfig.Default, content: @Composable () -> Unit) {
+fun AppTheme(
+    config: ThemeConfig = ThemeConfig.Default,
+    fontScaleOverride: Float? = null,
+    content: @Composable () -> Unit
+) {
     val colorScheme = rememberColorScheme(config)
     val shapes = rememberShapes(config.cardFamily)
     CompositionLocalProvider(LocalThemeConfig provides config) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            shapes = shapes,
-            typography = Typography(),
-            content = content
-        )
+        val baseDensity = LocalDensity.current
+        if (fontScaleOverride != null) {
+            CompositionLocalProvider(LocalDensity provides Density(baseDensity.density, fontScaleOverride)) {
+                MaterialTheme(
+                    colorScheme = colorScheme,
+                    shapes = shapes,
+                    typography = Typography(),
+                    content = content
+                )
+            }
+        } else {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                shapes = shapes,
+                typography = Typography(),
+                content = content
+            )
+        }
     }
 }
 
