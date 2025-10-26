@@ -115,7 +115,7 @@ dependencies {
     androidTestImplementation("androidx.glance:glance-appwidget-testing:1.1.1")
     androidTestImplementation("androidx.work:work-testing:2.9.0")
     androidTestImplementation("org.mockito:mockito-android:5.12.0")
-    androidTestImplementation("org.mockito:mockito-inline:5.12.0")
+    androidTestImplementation("com.linkedin.dexmaker:dexmaker-mockito-inline:2.28.1")
     androidTestImplementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
     kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
     baselineProfile(project(":baselineprofile"))
