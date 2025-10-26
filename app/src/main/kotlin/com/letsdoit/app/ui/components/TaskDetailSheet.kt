@@ -466,7 +466,16 @@ private fun SubtasksSection(subtasks: List<Subtask>, onToggleSubtask: (Subtask) 
                                 }
                             }
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val handleDescription = stringResource(
+                            id = R.string.accessibility_subtask_reorder_handle,
+                            subtask.title
+                        )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.semantics {
+                                contentDescription = handleDescription
+                            }
+                        ) {
                             IconButton(
                                 onClick = { onMoveSubtask(index, (index - 1).coerceAtLeast(0)) },
                                 enabled = index > 0,
