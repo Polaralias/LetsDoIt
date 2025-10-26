@@ -164,40 +164,36 @@ class DefaultBackupManager @Inject constructor(
 
     private suspend fun applySnapshot(snapshot: BackupSnapshot) {
         database.withTransaction {
-            spaceDao.clear()
-            folderDao.clear()
-            listDao.clear()
-            taskDao.clear()
-            subtaskDao.clear()
-            taskOrderDao.clear()
-            alarmIndexDao.clear()
-            taskSyncMetaDao.clear()
-            spaceDao.insert(snapshot.database.spaces.map { it.toEntity() })
-            folderDao.insert(snapshot.database.folders.map { it.toEntity() })
-            listDao.insert(snapshot.database.lists.map { it.toEntity() })
-            taskDao.insert(snapshot.database.tasks.map { it.toEntity() })
-            subtaskDao.insert(snapshot.database.subtasks.map { it.toEntity() })
-            taskOrderDao.insert(snapshot.database.orders.map { it.toEntity() })
-            alarmIndexDao.insert(snapshot.database.alarms.map { it.toEntity() })
-            taskSyncMetaDao.insert(snapshot.database.syncMeta.map { it.toEntity() })
+            database.clearAllTables()
+            snapshot.database.spaces.forEach { spaceDao.upsert(it.toEntity()) }
+            snapshot.database.folders.forEach { folderDao.upsert(it.toEntity()) }
+            snapshot.database.lists.forEach { listDao.upsert(it.toEntity()) }
+            snapshot.database.tasks.forEach { taskDao.upsert(it.toEntity()) }
+            snapshot.database.subtasks.forEach { subtaskDao.upsert(it.toEntity()) }
+            snapshot.database.orders.forEach { taskOrderDao.upsert(it.toEntity()) }
+            snapshot.database.alarms.forEach { alarmIndexDao.upsert(it.toEntity()) }
+            snapshot.database.syncMeta.forEach { taskSyncMetaDao.upsert(it.toEntity()) }
         }
         writePreferences(snapshot.preferences)
     }
 
     private suspend fun readPreferences(): PreferencesSnapshot {
         val preferences = dataStore.data.first()
-        val entries = preferences.asMap().map { (key, value) ->
-            val name = key.name
+        val entries = preferences.asMap().mapNotNull { (key, value) ->
             when (value) {
-                is String -> PreferenceEntry(name, PreferenceValueType.String, value)
-                is Set<*> -> PreferenceEntry(name, PreferenceValueType.StringSet, value)
-                is Int -> PreferenceEntry(name, PreferenceValueType.Int, value)
-                is Long -> PreferenceEntry(name, PreferenceValueType.Long, value)
-                is Boolean -> PreferenceEntry(name, PreferenceValueType.Boolean, value)
-                is Float -> PreferenceEntry(name, PreferenceValueType.Float, value)
+                is String -> PreferenceEntry(key.name, PreferenceValueType.String, stringValue = value)
+                is Set<*> -> {
+                    val values = value.filterIsInstance<String>()
+                    PreferenceEntry(key.name, PreferenceValueType.StringSet, stringSetValue = values)
+                }
+                is Int -> PreferenceEntry(key.name, PreferenceValueType.Int, intValue = value)
+                is Long -> PreferenceEntry(key.name, PreferenceValueType.Long, longValue = value)
+                is Boolean -> PreferenceEntry(key.name, PreferenceValueType.Boolean, booleanValue = value)
+                is Double -> PreferenceEntry(key.name, PreferenceValueType.Float, floatValue = value)
+                is Float -> PreferenceEntry(key.name, PreferenceValueType.Float, floatValue = value.toDouble())
                 else -> null
             }
-        }.filterNotNull()
+        }
         return PreferencesSnapshot(entries)
     }
 
@@ -206,12 +202,24 @@ class DefaultBackupManager @Inject constructor(
             preferences.clear()
             snapshot.entries.forEach { entry ->
                 when (entry.type) {
-                    PreferenceValueType.String -> preferences[stringPreferencesKey(entry.name)] = entry.value as String
-                    PreferenceValueType.StringSet -> preferences[stringSetPreferencesKey(entry.name)] = entry.value as Set<String>
-                    PreferenceValueType.Int -> preferences[intPreferencesKey(entry.name)] = entry.value as Int
-                    PreferenceValueType.Long -> preferences[longPreferencesKey(entry.name)] = entry.value as Long
-                    PreferenceValueType.Boolean -> preferences[booleanPreferencesKey(entry.name)] = entry.value as Boolean
-                    PreferenceValueType.Float -> preferences[doublePreferencesKey(entry.name)] = (entry.value as Double)
+                    PreferenceValueType.String -> entry.stringValue?.let { value ->
+                        preferences[stringPreferencesKey(entry.key)] = value
+                    }
+                    PreferenceValueType.StringSet -> entry.stringSetValue?.let { value ->
+                        preferences[stringSetPreferencesKey(entry.key)] = value.toSet()
+                    }
+                    PreferenceValueType.Int -> entry.intValue?.let { value ->
+                        preferences[intPreferencesKey(entry.key)] = value
+                    }
+                    PreferenceValueType.Long -> entry.longValue?.let { value ->
+                        preferences[longPreferencesKey(entry.key)] = value
+                    }
+                    PreferenceValueType.Boolean -> entry.booleanValue?.let { value ->
+                        preferences[booleanPreferencesKey(entry.key)] = value
+                    }
+                    PreferenceValueType.Float -> entry.floatValue?.let { value ->
+                        preferences[doublePreferencesKey(entry.key)] = value
+                    }
                 }
             }
         }
@@ -365,4 +373,29 @@ private fun SubtaskRecord.toEntity(): SubtaskEntity = SubtaskEntity(
     orderInParent = orderInParent,
     startAt = startAt,
     durationMinutes = durationMinutes
+)
+
+private fun TaskOrderRecord.toEntity(): TaskOrderEntity = TaskOrderEntity(
+    id = id,
+    taskId = taskId,
+    column = column,
+    orderInColumn = orderInColumn
+)
+
+private fun AlarmIndexRecord.toEntity(): AlarmIndexEntity = AlarmIndexEntity(
+    id = id,
+    taskId = taskId,
+    nextFireAt = nextFireAt,
+    rruleHash = rruleHash
+)
+
+private fun TaskSyncMetaRecord.toEntity(): TaskSyncMetaEntity = TaskSyncMetaEntity(
+    taskId = taskId,
+    remoteId = remoteId,
+    etag = etag,
+    remoteUpdatedAt = remoteUpdatedAt?.let { Instant.ofEpochMilli(it) },
+    needsPush = needsPush,
+    lastSyncedAt = lastSyncedAt?.let { Instant.ofEpochMilli(it) },
+    lastPulledAt = lastPulledAt?.let { Instant.ofEpochMilli(it) },
+    lastPushedAt = lastPushedAt?.let { Instant.ofEpochMilli(it) }
 )
