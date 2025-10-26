@@ -113,10 +113,10 @@ class ReminderNotificationsTest {
         awaitCondition { taskRepository.completionUpdates.contains(task.id to true) }
 
         ReminderActionReceiver.buildSnoozeIntent(context, task.id, 10).send()
-        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 10)
+        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 10L)
 
         ReminderActionReceiver.buildSnoozeIntent(context, task.id, 60).send()
-        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 60)
+        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 60L)
     }
 
     private suspend fun awaitCondition(timeoutMillis: Long = 2000, predicate: () -> Boolean) {
