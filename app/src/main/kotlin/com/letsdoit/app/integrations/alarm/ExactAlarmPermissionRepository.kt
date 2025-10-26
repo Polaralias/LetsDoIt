@@ -1,11 +1,17 @@
 package com.letsdoit.app.integrations.alarm
 
 import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,6 +40,7 @@ interface ExactAlarmPermissionRepository {
 
 @Singleton
 class DefaultExactAlarmPermissionRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val dataStore: DataStore<Preferences>,
     private val alarmManager: AlarmManager,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -41,7 +48,7 @@ class DefaultExactAlarmPermissionRepository @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val key = booleanPreferencesKey("exact_alarm_allowed")
     private val defaultAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-    private val defaultStatus = ExactAlarmPermissionStatus(defaultAllowed, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+    private val defaultStatus = ExactAlarmPermissionStatus(defaultAllowed, determineRequestAvailable())
     private val _status = MutableStateFlow(defaultStatus)
 
     override val status: StateFlow<ExactAlarmPermissionStatus> = _status.asStateFlow()
@@ -51,7 +58,7 @@ class DefaultExactAlarmPermissionRepository @Inject constructor(
             dataStore.data
                 .map { preferences -> preferences[key] ?: defaultAllowed }
                 .collect { allowed ->
-                    _status.value = ExactAlarmPermissionStatus(allowed, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                    _status.value = ExactAlarmPermissionStatus(allowed, determineRequestAvailable())
                 }
         }
         scope.launch {
@@ -75,6 +82,22 @@ class DefaultExactAlarmPermissionRepository @Inject constructor(
             alarmManager.canScheduleExactAlarms()
         } else {
             true
+        }
+    }
+
+    private fun determineRequestAvailable(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return false
+        }
+        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+            data = Uri.parse("package:${context.packageName}")
+        }
+        val packageManager = context.packageManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.resolveActivity(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())) != null
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null
         }
     }
 
