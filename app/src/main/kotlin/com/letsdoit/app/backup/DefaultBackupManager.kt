@@ -35,6 +35,7 @@ import java.security.GeneralSecurityException
 import java.time.Clock
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.util.Base64
 import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -122,12 +123,12 @@ class DefaultBackupManager @Inject constructor(
         } catch (error: GeneralSecurityException) {
             statusRepository.recordError(BackupError.Crypto, error.message, Instant.now(clock).toEpochMilli())
             RestoreResult.Failure(BackupError.Crypto, error.message)
-        } catch (error: IllegalStateException) {
-            statusRepository.recordError(BackupError.Snapshot, error.message, Instant.now(clock).toEpochMilli())
-            RestoreResult.Failure(BackupError.Snapshot, error.message)
         } catch (error: IOException) {
             statusRepository.recordError(BackupError.Remote, error.message, Instant.now(clock).toEpochMilli())
             RestoreResult.Failure(BackupError.Remote, error.message)
+        } catch (error: IllegalStateException) {
+            statusRepository.recordError(BackupError.Snapshot, error.message, Instant.now(clock).toEpochMilli())
+            RestoreResult.Failure(BackupError.Snapshot, error.message)
         } catch (error: Exception) {
             statusRepository.recordError(BackupError.Unknown, error.message, Instant.now(clock).toEpochMilli())
             RestoreResult.Failure(BackupError.Unknown, error.message)
@@ -139,84 +140,78 @@ class DefaultBackupManager @Inject constructor(
     }
 
     private suspend fun createSnapshot(): BackupSnapshot {
-        val spaces = spaceDao.listAll().map { it.toRecord() }
-        val folders = folderDao.listAll().map { it.toRecord() }
-        val lists = listDao.listAll().map { it.toRecord() }
-        val tasks = taskDao.listAll().map { it.toRecord() }
-        val subtasks = subtaskDao.listAll().map { it.toRecord() }
-        val orders = taskOrderDao.listAll().map { it.toRecord() }
-        val alarms = alarmIndexDao.listAll().map { it.toRecord() }
-        val syncMeta = taskSyncMetaDao.listAll().map { it.toRecord() }
-        val preferences = readPreferences()
-        return BackupSnapshot(
-            database = DatabaseSnapshot(
-                spaces = spaces,
-                folders = folders,
-                lists = lists,
-                tasks = tasks,
-                subtasks = subtasks,
-                orders = orders,
-                alarms = alarms,
-                syncMeta = syncMeta
-            ),
-            preferences = preferences
+        val spaces = spaceDao.listAll()
+        val folders = folderDao.listAll()
+        val lists = listDao.listAll()
+        val tasks = taskDao.listAll()
+        val subtasks = subtaskDao.listAll()
+        val orders = taskOrderDao.listAll()
+        val alarms = alarmIndexDao.listAll()
+        val syncMeta = taskSyncMetaDao.listAll()
+        val preferencesSnapshot = readPreferences()
+        val databaseSnapshot = DatabaseSnapshot(
+            spaces = spaces.map { it.toRecord() },
+            folders = folders.map { it.toRecord() },
+            lists = lists.map { it.toRecord() },
+            tasks = tasks.map { it.toRecord() },
+            subtasks = subtasks.map { it.toRecord() },
+            orders = orders.map { it.toRecord() },
+            alarms = alarms.map { it.toRecord() },
+            syncMeta = syncMeta.map { it.toRecord() }
         )
-    }
-
-    private suspend fun readPreferences(): PreferencesSnapshot {
-        val preferences = dataStore.data.first()
-        val entries = preferences.asMap().mapNotNull { (key, value) ->
-            when (value) {
-                is String -> PreferenceEntry(key.name, PreferenceValueType.String, stringValue = value)
-                is Set<*> -> {
-                    val values = value.filterIsInstance<String>()
-                    PreferenceEntry(key.name, PreferenceValueType.StringSet, stringSetValue = values)
-                }
-                is Int -> PreferenceEntry(key.name, PreferenceValueType.Int, intValue = value)
-                is Long -> PreferenceEntry(key.name, PreferenceValueType.Long, longValue = value)
-                is Boolean -> PreferenceEntry(key.name, PreferenceValueType.Boolean, booleanValue = value)
-                is Double -> PreferenceEntry(key.name, PreferenceValueType.Float, floatValue = value)
-                is Float -> PreferenceEntry(key.name, PreferenceValueType.Float, floatValue = value.toDouble())
-                else -> null
-            }
-        }
-        return PreferencesSnapshot(entries)
+        return BackupSnapshot(database = databaseSnapshot, preferences = preferencesSnapshot)
     }
 
     private suspend fun applySnapshot(snapshot: BackupSnapshot) {
         database.withTransaction {
-            database.clearAllTables()
-            snapshot.database.spaces.forEach { spaceDao.upsert(it.toEntity()) }
-            snapshot.database.folders.forEach { folderDao.upsert(it.toEntity()) }
-            snapshot.database.lists.forEach { listDao.upsert(it.toEntity()) }
-            snapshot.database.tasks.forEach { taskDao.upsert(it.toEntity()) }
-            snapshot.database.subtasks.forEach { subtaskDao.upsert(it.toEntity()) }
-            snapshot.database.orders.forEach { taskOrderDao.upsert(it.toEntity()) }
-            snapshot.database.alarms.forEach { alarmIndexDao.upsert(it.toEntity()) }
-            snapshot.database.syncMeta.forEach { taskSyncMetaDao.upsert(it.toEntity()) }
+            spaceDao.clear()
+            folderDao.clear()
+            listDao.clear()
+            taskDao.clear()
+            subtaskDao.clear()
+            taskOrderDao.clear()
+            alarmIndexDao.clear()
+            taskSyncMetaDao.clear()
+            spaceDao.insert(snapshot.database.spaces.map { it.toEntity() })
+            folderDao.insert(snapshot.database.folders.map { it.toEntity() })
+            listDao.insert(snapshot.database.lists.map { it.toEntity() })
+            taskDao.insert(snapshot.database.tasks.map { it.toEntity() })
+            subtaskDao.insert(snapshot.database.subtasks.map { it.toEntity() })
+            taskOrderDao.insert(snapshot.database.orders.map { it.toEntity() })
+            alarmIndexDao.insert(snapshot.database.alarms.map { it.toEntity() })
+            taskSyncMetaDao.insert(snapshot.database.syncMeta.map { it.toEntity() })
         }
+        writePreferences(snapshot.preferences)
+    }
+
+    private suspend fun readPreferences(): PreferencesSnapshot {
+        val preferences = dataStore.data.first()
+        val entries = preferences.asMap().map { (key, value) ->
+            val name = key.name
+            when (value) {
+                is String -> PreferenceEntry(name, PreferenceValueType.String, value)
+                is Set<*> -> PreferenceEntry(name, PreferenceValueType.StringSet, value)
+                is Int -> PreferenceEntry(name, PreferenceValueType.Int, value)
+                is Long -> PreferenceEntry(name, PreferenceValueType.Long, value)
+                is Boolean -> PreferenceEntry(name, PreferenceValueType.Boolean, value)
+                is Float -> PreferenceEntry(name, PreferenceValueType.Float, value)
+                else -> null
+            }
+        }.filterNotNull()
+        return PreferencesSnapshot(entries)
+    }
+
+    private suspend fun writePreferences(snapshot: PreferencesSnapshot) {
         dataStore.edit { preferences ->
             preferences.clear()
-            snapshot.preferences.entries.forEach { entry ->
+            snapshot.entries.forEach { entry ->
                 when (entry.type) {
-                    PreferenceValueType.String -> entry.stringValue?.let { value ->
-                        preferences[stringPreferencesKey(entry.key)] = value
-                    }
-                    PreferenceValueType.StringSet -> entry.stringSetValue?.let { value ->
-                        preferences[stringSetPreferencesKey(entry.key)] = value.toSet()
-                    }
-                    PreferenceValueType.Int -> entry.intValue?.let { value ->
-                        preferences[intPreferencesKey(entry.key)] = value
-                    }
-                    PreferenceValueType.Long -> entry.longValue?.let { value ->
-                        preferences[longPreferencesKey(entry.key)] = value
-                    }
-                    PreferenceValueType.Boolean -> entry.booleanValue?.let { value ->
-                        preferences[booleanPreferencesKey(entry.key)] = value
-                    }
-                    PreferenceValueType.Float -> entry.floatValue?.let { value ->
-                        preferences[doublePreferencesKey(entry.key)] = value
-                    }
+                    PreferenceValueType.String -> preferences[stringPreferencesKey(entry.name)] = entry.value as String
+                    PreferenceValueType.StringSet -> preferences[stringSetPreferencesKey(entry.name)] = entry.value as Set<String>
+                    PreferenceValueType.Int -> preferences[intPreferencesKey(entry.name)] = entry.value as Int
+                    PreferenceValueType.Long -> preferences[longPreferencesKey(entry.name)] = entry.value as Long
+                    PreferenceValueType.Boolean -> preferences[booleanPreferencesKey(entry.name)] = entry.value as Boolean
+                    PreferenceValueType.Float -> preferences[doublePreferencesKey(entry.name)] = (entry.value as Double)
                 }
             }
         }
@@ -241,16 +236,14 @@ class DefaultBackupManager @Inject constructor(
         val input = ZipInputStream(ByteArrayInputStream(payload))
         var manifest: BackupManifest? = null
         var snapshot: BackupSnapshot? = null
-        input.use { zip ->
-            var entry: ZipEntry? = zip.nextEntry
-            while (entry != null) {
-                val content = zip.readBytes()
-                when (entry.name) {
-                    "manifest.json" -> manifest = manifestAdapter.fromJson(content.toString(Charsets.UTF_8))
-                    "snapshot.json" -> snapshot = snapshotAdapter.fromJson(content.toString(Charsets.UTF_8))
-                }
-                entry = zip.nextEntry
+        var entry = input.nextEntry
+        while (entry != null) {
+            val content = input.readBytes()
+            when (entry.name) {
+                "manifest.json" -> manifest = manifestAdapter.fromJson(content.toString(Charsets.UTF_8))
+                "snapshot.json" -> snapshot = snapshotAdapter.fromJson(content.toString(Charsets.UTF_8))
             }
+            entry = input.nextEntry
         }
         val parsedManifest = manifest ?: throw IllegalStateException("Missing manifest")
         if (parsedManifest.schemaVersion != 1) {
@@ -271,7 +264,15 @@ class DefaultBackupManager @Inject constructor(
     }
 }
 
-private fun SpaceEntity.toRecord(): SpaceRecord = SpaceRecord(id = id, remoteId = remoteId, name = name)
+private fun SpaceEntity.toRecord(): SpaceRecord = SpaceRecord(
+    id = id,
+    remoteId = remoteId,
+    name = name,
+    isShared = isShared,
+    shareId = shareId,
+    ownerDeviceId = ownerDeviceId,
+    encKeySpace = encKeySpace?.let { Base64.getEncoder().encodeToString(it) }
+)
 
 private fun FolderEntity.toRecord(): FolderRecord = FolderRecord(id = id, spaceId = spaceId, remoteId = remoteId, name = name)
 
@@ -322,7 +323,15 @@ private fun TaskSyncMetaEntity.toRecord(): TaskSyncMetaRecord = TaskSyncMetaReco
     lastPushedAt = lastPushedAt?.toEpochMilli()
 )
 
-private fun SpaceRecord.toEntity(): SpaceEntity = SpaceEntity(id = id, remoteId = remoteId, name = name)
+private fun SpaceRecord.toEntity(): SpaceEntity = SpaceEntity(
+    id = id,
+    remoteId = remoteId,
+    name = name,
+    isShared = isShared,
+    shareId = shareId,
+    ownerDeviceId = ownerDeviceId,
+    encKeySpace = encKeySpace?.let { Base64.getDecoder().decode(it) }
+)
 
 private fun FolderRecord.toEntity(): FolderEntity = FolderEntity(id = id, spaceId = spaceId, remoteId = remoteId, name = name)
 
@@ -356,19 +365,4 @@ private fun SubtaskRecord.toEntity(): SubtaskEntity = SubtaskEntity(
     orderInParent = orderInParent,
     startAt = startAt,
     durationMinutes = durationMinutes
-)
-
-private fun TaskOrderRecord.toEntity(): TaskOrderEntity = TaskOrderEntity(id = id, taskId = taskId, column = column, orderInColumn = orderInColumn)
-
-private fun AlarmIndexRecord.toEntity(): AlarmIndexEntity = AlarmIndexEntity(id = id, taskId = taskId, nextFireAt = nextFireAt, rruleHash = rruleHash)
-
-private fun TaskSyncMetaRecord.toEntity(): TaskSyncMetaEntity = TaskSyncMetaEntity(
-    taskId = taskId,
-    remoteId = remoteId,
-    etag = etag,
-    remoteUpdatedAt = remoteUpdatedAt?.let { Instant.ofEpochMilli(it) },
-    needsPush = needsPush,
-    lastSyncedAt = lastSyncedAt?.let { Instant.ofEpochMilli(it) },
-    lastPulledAt = lastPulledAt?.let { Instant.ofEpochMilli(it) },
-    lastPushedAt = lastPushedAt?.let { Instant.ofEpochMilli(it) }
 )

@@ -24,7 +24,11 @@ data class DatabaseSnapshot(
 data class SpaceRecord(
     val id: Long,
     val remoteId: String?,
-    val name: String
+    val name: String,
+    val isShared: Boolean,
+    val shareId: String?,
+    val ownerDeviceId: String?,
+    val encKeySpace: String?
 )
 
 @JsonClass(generateAdapter = true)
@@ -109,15 +113,6 @@ data class PreferencesSnapshot(
     val entries: List<PreferenceEntry>
 )
 
-enum class PreferenceValueType {
-    String,
-    StringSet,
-    Int,
-    Long,
-    Boolean,
-    Float
-}
-
 @JsonClass(generateAdapter = true)
 data class PreferenceEntry(
     val key: String,
@@ -129,3 +124,12 @@ data class PreferenceEntry(
     val booleanValue: Boolean? = null,
     val floatValue: Double? = null
 )
+
+enum class PreferenceValueType {
+    String,
+    StringSet,
+    Int,
+    Long,
+    Boolean,
+    Float
+}

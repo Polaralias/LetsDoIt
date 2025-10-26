@@ -7,5 +7,9 @@ import androidx.room.PrimaryKey
 data class SpaceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val remoteId: String? = null,
-    val name: String
+    val name: String,
+    val isShared: Boolean = false,
+    val shareId: String? = null,
+    val ownerDeviceId: String? = null,
+    val encKeySpace: ByteArray? = null
 )
