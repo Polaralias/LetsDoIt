@@ -2,6 +2,7 @@ package com.letsdoit.app.ai.process
 
 import com.letsdoit.app.ai.AiInput
 import com.letsdoit.app.ai.provider.AiParsePrompt
+import com.letsdoit.app.ai.prompts.PromptRepository
 import com.letsdoit.app.ai.settings.AiSettings
 import java.time.Clock
 import java.time.LocalDate
@@ -13,7 +14,8 @@ import javax.inject.Singleton
 
 @Singleton
 class AiPreprocessor @Inject constructor(
-    private val clock: Clock
+    private val clock: Clock,
+    private val promptRepository: PromptRepository
 ) {
     private val dependencyKeywords = listOf("after", "depends on", "only once", "blocked by", "then")
     private val escalationPatterns = listOf("except bank holidays", "unless", "only if")
@@ -47,6 +49,7 @@ class AiPreprocessor @Inject constructor(
             heuristicFlags.add("dates")
         }
         val prompt = AiParsePrompt(
+            instructions = promptRepository.parseTasks,
             transcript = transcript,
             projectName = input.projectName,
             timezone = input.timezone,

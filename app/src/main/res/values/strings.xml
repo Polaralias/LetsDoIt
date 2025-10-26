@@ -40,7 +40,7 @@
     <string name="accent_generate_action">Generate</string>
     <string name="accent_save_action">Save pack</string>
     <string name="accent_error_missing_key">Add your OpenAI key to generate accents.</string>
-    <string name="accent_error_network">Could not reach the image service. Check your connection and try again.</string>
+    <string name="accent_error_network">AI service unavailable. Please try again.</string>
     <string name="accent_error_server">Image generation failed: %1$s</string>
     <string name="accent_error_unknown_reason">Unknown error</string>
     <string name="accent_error_unknown">Image generation failed. Please try again.</string>

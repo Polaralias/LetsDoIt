@@ -2,10 +2,11 @@ package com.letsdoit.app.ai.provider
 
 sealed interface ProviderResponse {
     data class Success(val body: String) : ProviderResponse
-    data class Failure(val message: String, val retryable: Boolean = false) : ProviderResponse
+    data class Failure(val message: String?, val retryable: Boolean = false, val status: Int? = null) : ProviderResponse
 }
 
 data class AiParsePrompt(
+    val instructions: String,
     val transcript: String,
     val projectName: String?,
     val timezone: String?,

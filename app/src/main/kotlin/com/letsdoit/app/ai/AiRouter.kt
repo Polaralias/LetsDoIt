@@ -1,5 +1,6 @@
 package com.letsdoit.app.ai
 
+import com.letsdoit.app.ai.diagnostics.AiDiagnosticsSink
 import com.letsdoit.app.ai.model.AiParseResult
 import com.letsdoit.app.ai.model.AiSchemaValidator
 import com.letsdoit.app.ai.model.SchemaValidationResult
@@ -11,6 +12,7 @@ import com.letsdoit.app.ai.process.AiPreprocessor
 import com.letsdoit.app.ai.process.PreprocessResult
 import com.letsdoit.app.ai.provider.AiImageProvider
 import com.letsdoit.app.ai.provider.AiTextProvider
+import com.letsdoit.app.ai.provider.AiProviderException
 import com.letsdoit.app.ai.provider.ProviderResponse
 import com.letsdoit.app.ai.settings.AiImageProviderId
 import com.letsdoit.app.ai.settings.AiSettings
@@ -34,30 +36,41 @@ class AiRouter @Inject constructor(
     private val moshi: Moshi,
     private val metrics: AiMetricsRecorder,
     private val textProviders: Map<AiTextProviderId, @JvmSuppressWildcards AiTextProvider>,
-    private val imageProviders: Map<AiImageProviderId, @JvmSuppressWildcards AiImageProvider>
+    private val imageProviders: Map<AiImageProviderId, @JvmSuppressWildcards AiImageProvider>,
+    private val errorMapper: AiErrorMapper,
+    private val diagnostics: AiDiagnosticsSink
 ) {
     private val adapter = moshi.adapter(AiParseResult::class.java)
     private val sessionMutex = Mutex()
     private val sessionResults = LinkedHashMap<String, AiParseResult>()
 
-    suspend fun parseTasks(input: AiInput): AiParseResult {
-        cache.get(input)?.let { return it }
+    suspend fun parseTasks(input: AiInput): AiResult<AiParseResult> {
+        cache.get(input)?.let { return AiResult.Success(it) }
         sessionMutex.withLock {
-            sessionResults[input.transcript]?.let { return it }
+            sessionResults[input.transcript]?.let { return AiResult.Success(it) }
         }
-        val result = executeParsing(input)
-        cache.put(input, result)
-        sessionMutex.withLock {
-            sessionResults[input.transcript] = result
-            if (sessionResults.size > 50) {
-                val iterator = sessionResults.iterator()
-                if (iterator.hasNext()) {
-                    iterator.next()
-                    iterator.remove()
+        val outcome = runCatching { executeParsing(input) }
+        return outcome.fold(
+            onSuccess = { result ->
+                cache.put(input, result)
+                sessionMutex.withLock {
+                    sessionResults[input.transcript] = result
+                    if (sessionResults.size > 50) {
+                        val iterator = sessionResults.iterator()
+                        if (iterator.hasNext()) {
+                            iterator.next()
+                            iterator.remove()
+                        }
+                    }
                 }
+                AiResult.Success(result)
+            },
+            onFailure = { error ->
+                val mapping = errorMapper.fromException(error)
+                diagnostics.log(mapping.summary)
+                AiResult.Failure(mapping.error)
             }
-        }
-        return result
+        )
     }
 
     suspend fun splitSubtasks(title: String, notes: String?): List<String> {
@@ -96,10 +109,12 @@ class AiRouter @Inject constructor(
         var validationRetries = 0
         var lastResult: AiParseResult? = null
         var preprocessData: PreprocessResult? = null
+        var lastProviderId: AiTextProviderId? = null
         while (attempt < 3) {
             val settings = settingsRepository.settings.first()
             val providerId = settings.textProvider
-            val provider = textProviders[providerId] ?: throw IllegalStateException("Text provider unavailable")
+            lastProviderId = providerId
+            val provider = textProviders[providerId] ?: throw AiProviderException(providerId.name, null, false, "unavailable")
             val model = selectModel(settings, escalate, highReasoning)
             val reasoning = when {
                 highReasoning -> "high"
@@ -134,11 +149,11 @@ class AiRouter @Inject constructor(
                         attempt += 1
                         continue
                     }
-                    throw IllegalStateException("Provider error: ${response.message}")
+                    throw AiProviderException(providerId.name, response.status, response.retryable, response.message)
                 }
                 is ProviderResponse.Success -> {
                     val duration = (System.nanoTime() - start) / 1_000_000
-                    val parsed = adapter.fromJson(response.body) ?: throw IllegalStateException("Invalid provider response")
+                    val parsed = adapter.fromJson(response.body) ?: throw AiProviderException(providerId.name, null, false, "invalid_response")
                     val validation = validator.validate(parsed)
                     metrics.record(AiCallMetric(providerId.name, model, duration, validation is SchemaValidationResult.Valid, escalate))
                     when (validation) {
@@ -186,7 +201,8 @@ class AiRouter @Inject constructor(
                 break
             }
         }
-        return lastResult ?: throw IllegalStateException("Unable to parse transcript")
+        val providerName = lastProviderId?.name ?: "unknown"
+        return lastResult ?: throw AiProviderException(providerName, null, false, "no_result")
     }
 
     private fun shouldEscalate(

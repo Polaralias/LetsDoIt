@@ -30,4 +30,15 @@ class DiagnosticsRedactorTest {
         assertTrue(output.contains("clickup_token=[REDACTED]"))
         assertFalse(output.contains("pk_live_abcdef"))
     }
+
+    @Test
+    fun redactsJsonBodies() {
+        val input = """{"error":{"apiKey":"sk-example","prompt":"Collect the receipts","detailUrl":"https://secrets.example.com"}}"""
+        val output = redactor.redact(input)
+        assertFalse(output.contains("sk-example"))
+        assertFalse(output.contains("Collect the receipts"))
+        assertFalse(output.contains("https://"))
+        assertTrue(output.contains("[REDACTED]"))
+        assertTrue(output.contains("[REDACTED_PROMPT]"))
+    }
 }
