@@ -116,6 +116,7 @@ class SyncWorkerRetryInstrumentedTest {
         val workSpec = workManagerImpl.workDatabase.workSpecDao().getWorkSpec(workInfo.id.toString())
         assertIs<SyncReport.RateLimited>(statusRepository.lastReport)
         assertEquals(45_000L, workSpec.initialDelay)
+        assertEquals(45L, statusRepository.current.lastRetryAfterSeconds)
     }
 
     private suspend fun seedTask() {
@@ -193,6 +194,7 @@ class SyncWorkerRetryInstrumentedTest {
         )
         override val status: Flow<SyncStatus> = _status
         var lastReport: SyncReport? = null
+        val current: SyncStatus get() = _status.value
 
         override suspend fun record(report: SyncReport, completedAt: Instant) {
             lastReport = report

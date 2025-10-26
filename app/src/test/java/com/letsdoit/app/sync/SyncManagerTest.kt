@@ -216,7 +216,7 @@ class SyncManagerTest {
     }
 
     @Test
-    fun remoteWinsWhenRemoteIsFresh() = runTest {
+    fun remoteWinsWhenMoreThanTwoMinutesAhead() = runTest {
         val taskId = seedTask()
         val meta = TaskSyncMeta(
             taskId = taskId,
@@ -229,7 +229,7 @@ class SyncManagerTest {
             lastPushedAt = null
         )
         syncStateManager.save(meta)
-        val remoteUpdatedAt = Instant.parse("2024-01-01T00:03:30Z")
+        val remoteUpdatedAt = Instant.parse("2024-01-01T00:02:01Z")
         service.enqueueGet(
             Response.success(
                 ClickUpTaskDto(
@@ -253,7 +253,7 @@ class SyncManagerTest {
     }
 
     @Test
-    fun localWinsWhenAheadByThreshold() = runTest {
+    fun localWinsWhenMoreThanTwoMinutesAhead() = runTest {
         val taskId = seedTask()
         val existing = taskDao.getById(taskId)!!
         val localUpdatedAt = Instant.parse("2024-01-01T00:05:00Z")
@@ -269,7 +269,7 @@ class SyncManagerTest {
             lastPushedAt = null
         )
         syncStateManager.save(meta)
-        val remoteUpdatedAt = Instant.parse("2024-01-01T00:02:00Z")
+        val remoteUpdatedAt = Instant.parse("2024-01-01T00:02:30Z")
         service.enqueueGet(
             Response.success(
                 ClickUpTaskDto(
@@ -309,7 +309,7 @@ class SyncManagerTest {
     }
 
     @Test
-    fun serverWinsWhenDifferenceWithinTolerance() = runTest {
+    fun serverWinsWhenWithinTwoMinutes() = runTest {
         val taskId = seedTask()
         val existing = taskDao.getById(taskId)!!
         val localUpdatedAt = Instant.parse("2024-01-01T00:05:00Z")
@@ -325,7 +325,7 @@ class SyncManagerTest {
             lastPushedAt = null
         )
         syncStateManager.save(meta)
-        val remoteUpdatedAt = Instant.parse("2024-01-01T00:04:30Z")
+        val remoteUpdatedAt = Instant.parse("2024-01-01T00:04:00Z")
         service.enqueueGet(
             Response.success(
                 ClickUpTaskDto(
