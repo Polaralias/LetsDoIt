@@ -28,4 +28,7 @@ interface ListDao {
 
     @Upsert
     suspend fun upsert(list: ListEntity)
+
+    @Query("DELETE FROM lists")
+    suspend fun clear()
 }

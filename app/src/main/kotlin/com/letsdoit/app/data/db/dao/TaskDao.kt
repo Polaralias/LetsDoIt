@@ -33,6 +33,9 @@ interface TaskDao {
     @Upsert
     suspend fun upsert(task: TaskEntity): Long
 
+    @Query("DELETE FROM tasks")
+    suspend fun clear()
+
     @Query("SELECT MAX(orderInList) FROM tasks WHERE listId = :listId")
     suspend fun maxOrderInList(listId: Long): Int?
 

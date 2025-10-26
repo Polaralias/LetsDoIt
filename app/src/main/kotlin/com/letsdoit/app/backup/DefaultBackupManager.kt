@@ -164,7 +164,14 @@ class DefaultBackupManager @Inject constructor(
 
     private suspend fun applySnapshot(snapshot: BackupSnapshot) {
         database.withTransaction {
-            database.clearAllTables()
+            spaceDao.clear()
+            folderDao.clear()
+            listDao.clear()
+            taskDao.clear()
+            subtaskDao.clear()
+            taskOrderDao.clear()
+            alarmIndexDao.clear()
+            taskSyncMetaDao.clear()
             snapshot.database.spaces.forEach { spaceDao.upsert(it.toEntity()) }
             snapshot.database.folders.forEach { folderDao.upsert(it.toEntity()) }
             snapshot.database.lists.forEach { listDao.upsert(it.toEntity()) }

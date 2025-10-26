@@ -27,6 +27,9 @@ interface TaskOrderDao {
     @Query("DELETE FROM task_order WHERE taskId = :taskId")
     suspend fun deleteForTask(taskId: Long)
 
+    @Query("DELETE FROM task_order")
+    suspend fun clear()
+
     @Transaction
     suspend fun rewrite(column: String, orders: List<TaskOrderEntity>) {
         orders.forEachIndexed { index, entity ->
