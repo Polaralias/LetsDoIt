@@ -12,8 +12,11 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.room.withTransaction
 import com.letsdoit.app.data.db.AppDatabase
 import com.letsdoit.app.data.db.dao.AlarmIndexDao
+import com.letsdoit.app.data.db.dao.CrdtEventDao
+import com.letsdoit.app.data.db.dao.EventAckDao
 import com.letsdoit.app.data.db.dao.FolderDao
 import com.letsdoit.app.data.db.dao.ListDao
+import com.letsdoit.app.data.db.dao.SharedListDao
 import com.letsdoit.app.data.db.dao.SpaceDao
 import com.letsdoit.app.data.db.dao.SubtaskDao
 import com.letsdoit.app.data.db.dao.TaskDao
@@ -58,6 +61,9 @@ class DefaultBackupManager @Inject constructor(
     private val taskOrderDao: TaskOrderDao,
     private val alarmIndexDao: AlarmIndexDao,
     private val taskSyncMetaDao: TaskSyncMetaDao,
+    private val sharedListDao: SharedListDao,
+    private val crdtEventDao: CrdtEventDao,
+    private val eventAckDao: EventAckDao,
     private val dataStore: DataStore<Preferences>,
     private val driveClient: DriveBackupClient,
     private val crypto: BackupCrypto,
@@ -172,6 +178,9 @@ class DefaultBackupManager @Inject constructor(
             taskOrderDao.clear()
             alarmIndexDao.clear()
             taskSyncMetaDao.clear()
+            sharedListDao.deleteAll()
+            crdtEventDao.deleteAll()
+            eventAckDao.deleteAll()
             snapshot.database.spaces.forEach { spaceDao.upsert(it.toEntity()) }
             snapshot.database.folders.forEach { folderDao.upsert(it.toEntity()) }
             snapshot.database.lists.forEach { listDao.upsert(it.toEntity()) }
