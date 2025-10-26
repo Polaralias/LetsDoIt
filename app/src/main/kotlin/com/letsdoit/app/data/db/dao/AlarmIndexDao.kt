@@ -16,6 +16,9 @@ interface AlarmIndexDao {
     @Query("DELETE FROM alarm_index WHERE taskId = :taskId")
     suspend fun deleteByTaskId(taskId: Long)
 
+    @Query("DELETE FROM alarm_index")
+    suspend fun clear()
+
     @Query("SELECT * FROM alarm_index")
     suspend fun listAll(): List<AlarmIndexEntity>
 

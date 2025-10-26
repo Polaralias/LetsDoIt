@@ -16,4 +16,7 @@ interface FolderDao {
 
     @Upsert
     suspend fun upsert(folder: FolderEntity)
+
+    @Query("DELETE FROM folders")
+    suspend fun clear()
 }

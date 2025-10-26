@@ -20,6 +20,9 @@ interface TaskSyncMetaDao {
     @Upsert
     suspend fun upsert(entity: TaskSyncMetaEntity)
 
+    @Query("DELETE FROM task_sync_meta")
+    suspend fun clear()
+
     @Query("DELETE FROM task_sync_meta WHERE taskId = :taskId")
     suspend fun delete(taskId: Long)
 

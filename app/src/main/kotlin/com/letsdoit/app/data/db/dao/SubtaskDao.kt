@@ -20,6 +20,9 @@ interface SubtaskDao {
     @Upsert
     suspend fun upsert(subtask: SubtaskEntity): Long
 
+    @Query("DELETE FROM subtasks")
+    suspend fun clear()
+
     @Query("UPDATE subtasks SET done = :done WHERE id = :subtaskId")
     suspend fun updateDone(subtaskId: Long, done: Boolean)
 
