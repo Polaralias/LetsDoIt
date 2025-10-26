@@ -33,17 +33,17 @@ class BaselineProfileGenerator {
 
     private fun openList() {
         device.findObject(By.text("List"))?.click()
-        device.waitForIdle()
+        device.wait(Until.hasObject(By.text("Add")), 5_000)
     }
 
     private fun openTimeline() {
         device.findObject(By.text("Timeline"))?.click()
-        device.waitForIdle()
+        device.wait(Until.hasObject(By.text("Nothing on your list yet")), 5_000)
     }
 
     private fun openBoard() {
         device.findObject(By.text("Buckets"))?.click()
-        device.waitForIdle()
+        device.wait(Until.hasObject(By.text("No buckets available")), 5_000)
     }
 
     private fun addTask() {

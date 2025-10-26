@@ -1,0 +1,10 @@
+HSPLcom/letsdoit/app/LetsDoItApp
+HSPLcom/letsdoit/app/MainActivity
+HSPLcom/letsdoit/app/ui/screens/TasksListScreenKt
+HSPLcom/letsdoit/app/ui/screens/TimelineScreenKt
+HSPLcom/letsdoit/app/ui/screens/BucketsScreenKt
+HSPLcom/letsdoit/app/ui/screens/BulkAddScreenKt
+HSPLcom/letsdoit/app/ui/components/TaskCardKt
+HSPLcom/letsdoit/app/ui/components/TaskDetailSheetKt
+HSPLcom/letsdoit/app/ui/components/BottomBarKt
+HSPLcom/letsdoit/app/ui/theme/ThemeKt
