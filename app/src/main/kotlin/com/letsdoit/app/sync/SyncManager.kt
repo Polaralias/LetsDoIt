@@ -123,28 +123,39 @@ class SyncManager @Inject constructor(
         remote: ClickUpTaskDto,
         etag: String?
     ): OperationResult {
+        val localUpdatedAt = local.updatedAt
         val remoteUpdatedAt = Instant.ofEpochMilli(remote.date_updated)
-        return if (local.updatedAt.isAfter(remoteUpdatedAt.plusSeconds(FRESHNESS_TOLERANCE_SECONDS))) {
-            val ifMatch = etag ?: meta.etag
-            val response = clickUpService.updateTask(remoteId, buildUpdatePayload(local), ifMatch)
-            if (response.isSuccessful) {
-                val body = response.body()
-                val newEtag = response.headers()[HEADER_ETAG] ?: ifMatch
-                val responseUpdatedAt = body?.date_updated?.let { Instant.ofEpochMilli(it) } ?: remoteUpdatedAt
-                syncStateManager.markPushed(meta.taskId, newEtag, responseUpdatedAt, clock.instant())
-                if (body != null) {
-                    applyRemoteTask(meta.taskId, body)
-                }
-                OperationResult.Completed(pushes = 1)
-            } else if (response.code() == HTTP_PRECONDITION_FAILED) {
-                resolvePrecondition(meta, remoteId)
-            } else {
-                handleErrorResponse(response)
+        val remoteIsFresher = remoteUpdatedAt.isAfter(localUpdatedAt.plusSeconds(FRESHNESS_TOLERANCE_SECONDS))
+        val localIsFresher = localUpdatedAt.isAfter(remoteUpdatedAt.plusSeconds(FRESHNESS_TOLERANCE_SECONDS))
+        return when {
+            remoteIsFresher -> {
+                applyRemoteTask(meta.taskId, remote)
+                syncStateManager.markPulled(meta.taskId, etag, remoteUpdatedAt, clock.instant())
+                OperationResult.Completed(pulls = 1)
             }
-        } else {
-            applyRemoteTask(meta.taskId, remote)
-            syncStateManager.markPulled(meta.taskId, etag, remoteUpdatedAt, clock.instant())
-            OperationResult.Completed(pulls = 1)
+            localIsFresher -> {
+                val ifMatch = etag ?: meta.etag
+                val response = clickUpService.updateTask(remoteId, buildUpdatePayload(local), ifMatch)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    val newEtag = response.headers()[HEADER_ETAG] ?: ifMatch
+                    val responseUpdatedAt = body?.date_updated?.let { Instant.ofEpochMilli(it) } ?: remoteUpdatedAt
+                    syncStateManager.markPushed(meta.taskId, newEtag, responseUpdatedAt, clock.instant())
+                    if (body != null) {
+                        applyRemoteTask(meta.taskId, body)
+                    }
+                    OperationResult.Completed(pushes = 1)
+                } else if (response.code() == HTTP_PRECONDITION_FAILED) {
+                    resolvePrecondition(meta, remoteId)
+                } else {
+                    handleErrorResponse(response)
+                }
+            }
+            else -> {
+                applyRemoteTask(meta.taskId, remote)
+                syncStateManager.markPulled(meta.taskId, etag, remoteUpdatedAt, clock.instant())
+                OperationResult.Completed(pulls = 1)
+            }
         }
     }
 

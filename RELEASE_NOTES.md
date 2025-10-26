@@ -11,6 +11,7 @@
 - Surfaced sync telemetry and recovery tools in Settings, including reset by task ID
 - Implemented server-wins reconciliation with remote freshness tracking and conditional pushes for up-to-date overrides
 - Respected Retry-After delays by scheduling deferred work, persisting the window and surfacing it in Settings
+- Clarified the two-minute freshness rule with server precedence and recorded Retry-After windows for visibility in Settings
 
 ## Build infrastructure
 - Bundled local Gradle plugin markers so builds run in constrained network environments.
