@@ -22,6 +22,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -66,6 +67,7 @@ class AiRouter @Inject constructor(
                 AiResult.Success(result)
             },
             onFailure = { error ->
+                if (error is CancellationException) throw error
                 val mapping = errorMapper.fromException(error)
                 diagnostics.log(mapping.summary)
                 AiResult.Failure(mapping.error)
