@@ -22,7 +22,17 @@ class BackupCryptoTest {
         val manifest = BackupManifest(schemaVersion = 1, createdAt = 1234L)
         val snapshot = BackupSnapshot(
             database = DatabaseSnapshot(
-                spaces = listOf(SpaceRecord(id = 1, remoteId = "remote", name = "Home")),
+                spaces = listOf(
+                    SpaceRecord(
+                        id = 1,
+                        remoteId = "remote",
+                        name = "Home",
+                        isShared = false,
+                        shareId = null,
+                        ownerDeviceId = null,
+                        encKeySpace = null
+                    )
+                ),
                 folders = listOf(FolderRecord(id = 1, spaceId = 1, remoteId = null, name = "Planning")),
                 lists = listOf(ListRecord(id = 1, spaceId = 1, folderId = null, remoteId = null, name = "Tasks")),
                 tasks = listOf(

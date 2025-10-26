@@ -20,6 +20,10 @@ import com.letsdoit.app.data.db.dao.TranscriptSessionDao
 import com.letsdoit.app.data.db.entities.FolderEntity
 import com.letsdoit.app.data.db.entities.ListEntity
 import com.letsdoit.app.data.db.entities.SpaceEntity
+import com.letsdoit.app.data.db.entities.SpaceMemberEntity
+import com.letsdoit.app.data.db.entities.SpaceEventEntity
+import com.letsdoit.app.data.db.entities.SpaceEventAckEntity
+import com.letsdoit.app.data.db.entities.SharedListMigrationEntity
 import com.letsdoit.app.data.db.entities.SubtaskEntity
 import com.letsdoit.app.data.db.entities.TaskEntity
 import com.letsdoit.app.data.db.entities.TaskOrderEntity
@@ -47,9 +51,13 @@ import com.letsdoit.app.data.db.entities.SharedListEntity
         TranscriptSessionEntity::class,
         SharedListEntity::class,
         CrdtEventEntity::class,
-        EventAckEntity::class
+        EventAckEntity::class,
+        SpaceMemberEntity::class,
+        SpaceEventEntity::class,
+        SpaceEventAckEntity::class,
+        SharedListMigrationEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -171,5 +179,29 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
             "CREATE TABLE IF NOT EXISTS event_acks (id TEXT NOT NULL PRIMARY KEY, listId INTEGER NOT NULL, acknowledgedAt INTEGER NOT NULL, FOREIGN KEY(listId) REFERENCES lists(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS index_event_acks_listId ON event_acks(listId)")
+    }
+}
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE spaces ADD COLUMN isShared INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE spaces ADD COLUMN shareId TEXT")
+        db.execSQL("ALTER TABLE spaces ADD COLUMN ownerDeviceId TEXT")
+        db.execSQL("ALTER TABLE spaces ADD COLUMN encKeySpace BLOB")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS space_members (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, shareId TEXT NOT NULL, deviceId TEXT NOT NULL, displayName TEXT, joinedAt INTEGER NOT NULL, role TEXT NOT NULL)"
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_space_members_shareId_deviceId ON space_members(shareId, deviceId)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS space_events (id TEXT NOT NULL PRIMARY KEY, shareId TEXT NOT NULL, authorDeviceId TEXT NOT NULL, lamport INTEGER NOT NULL, timestamp INTEGER NOT NULL, type TEXT NOT NULL, payloadJson TEXT NOT NULL, applied INTEGER NOT NULL DEFAULT 0)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_space_events_shareId_lamport_authorDeviceId_id ON space_events(shareId, lamport, authorDeviceId, id)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS space_event_acks (id TEXT NOT NULL PRIMARY KEY, shareId TEXT NOT NULL, acknowledgedAt INTEGER NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_space_event_acks_shareId_acknowledgedAt ON space_event_acks(shareId, acknowledgedAt)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS shared_list_migrations (legacyShareId TEXT NOT NULL PRIMARY KEY, spaceShareId TEXT NOT NULL)"
+        )
     }
 }
