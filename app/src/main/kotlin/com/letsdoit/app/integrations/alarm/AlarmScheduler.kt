@@ -71,7 +71,7 @@ class DefaultAlarmScheduler @Inject constructor(
             alarmController.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
         } else {
             alarmController.setInexact(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-            diagnosticsManager.log("Reminders", "Exact alarm unavailable; scheduled inexact reminder")
+            diagnosticsManager.log("Reminders", "exact_alarm_fallback")
         }
     }
 
