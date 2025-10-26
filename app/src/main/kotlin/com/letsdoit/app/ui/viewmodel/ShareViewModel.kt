@@ -2,11 +2,14 @@ package com.letsdoit.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.letsdoit.app.R
+import com.letsdoit.app.data.db.entities.ListEntity
+import com.letsdoit.app.data.task.TaskRepository
 import com.letsdoit.app.share.DriveAccount
 import com.letsdoit.app.share.DriveAuthManager
-import com.letsdoit.app.R
 import com.letsdoit.app.share.InviteLinkBuilder
 import com.letsdoit.app.share.NearbyPeer
+import com.letsdoit.app.share.ShareInvite
 import com.letsdoit.app.share.ShareRepository
 import com.letsdoit.app.share.ShareState
 import com.letsdoit.app.share.ShareTransport
@@ -39,6 +42,8 @@ data class ShareUiState(
     val showAccountPicker: Boolean = false,
     val availableAccounts: List<DriveAccount> = emptyList(),
     val sharedLists: List<com.letsdoit.app.share.SharedList> = emptyList(),
+    val localLists: List<LocalShareList> = emptyList(),
+    val inviteListId: Long? = null,
     val syncing: Boolean = false
 )
 
@@ -51,13 +56,18 @@ sealed class ShareEvent {
 class ShareViewModel @Inject constructor(
     private val repository: ShareRepository,
     private val driveAuthManager: DriveAuthManager,
-    private val inviteLinkBuilder: InviteLinkBuilder
+    private val inviteLinkBuilder: InviteLinkBuilder,
+    private val taskRepository: TaskRepository
 ) : ViewModel() {
     private val internalState = MutableStateFlow(InternalState())
     private val _events = MutableSharedFlow<ShareEvent>()
     val events: SharedFlow<ShareEvent> = _events
-    val uiState: StateFlow<ShareUiState> = combine(repository.shareState, internalState) { state, internal ->
-        state.toUiState(internal)
+    val uiState: StateFlow<ShareUiState> = combine(
+        repository.shareState,
+        internalState,
+        taskRepository.observeLists()
+    ) { state, internal, lists ->
+        state.toUiState(internal, lists)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ShareUiState())
 
     fun selectTransport(transport: ShareTransport) {
@@ -95,7 +105,7 @@ class ShareViewModel @Inject constructor(
     fun signOut() {
         viewModelScope.launch {
             driveAuthManager.signOut()
-            internalState.update { it.copy(inviteLink = null) }
+            internalState.update { it.copy(inviteLink = null, inviteListId = null) }
         }
     }
 
@@ -117,6 +127,10 @@ class ShareViewModel @Inject constructor(
         viewModelScope.launch {
             internalState.update { it.copy(syncing = true) }
             runCatching { driveAuthManager.refreshStatus() }
+            val sharedLists = repository.shareState.first().sharedLists
+            sharedLists.forEach { list ->
+                runCatching { repository.syncSharedList(list.listId) }
+            }
             val current = repository.readNearbyState()
             val peerList = updatePeers(current.peers)
             repository.updateNearby(
@@ -129,12 +143,23 @@ class ShareViewModel @Inject constructor(
         }
     }
 
-    fun generateInvite() {
+    fun generateInvite(listId: Long) {
         viewModelScope.launch {
             val state = repository.shareState.first()
-            val invite = inviteLinkBuilder.createNew(state.selectedTransport, state.drive.driveFolderId)
+            val share = state.sharedLists.firstOrNull { it.listId == listId }
+            if (share == null) {
+                _events.emit(ShareEvent.MessageRes(R.string.share_no_shared_lists))
+                return@launch
+            }
+            val invite = ShareInvite(
+                shareId = share.shareId,
+                transport = share.transport,
+                key = share.key,
+                driveFolderId = share.driveFolderId,
+                createdAt = System.currentTimeMillis()
+            )
             repository.updateInvite(invite)
-            internalState.update { it.copy(inviteLink = inviteLinkBuilder.build(invite)) }
+            internalState.update { it.copy(inviteLink = inviteLinkBuilder.build(invite), inviteListId = listId) }
         }
     }
 
@@ -145,8 +170,35 @@ class ShareViewModel @Inject constructor(
         }
     }
 
-    private fun ShareState.toUiState(internal: InternalState): ShareUiState {
+    fun createShare(listId: Long) {
+        viewModelScope.launch {
+            internalState.update { it.copy(syncing = true) }
+            val state = repository.shareState.first()
+            runCatching { repository.createSharedList(listId, state.selectedTransport) }
+                .onFailure { error ->
+                    _events.emit(ShareEvent.Message(error.message ?: "Unable to create share"))
+                }
+            internalState.update { it.copy(syncing = false) }
+        }
+    }
+
+    fun syncList(listId: Long) {
+        viewModelScope.launch {
+            internalState.update { it.copy(syncing = true) }
+            runCatching { repository.syncSharedList(listId) }
+                .onFailure { error ->
+                    _events.emit(ShareEvent.Message(error.message ?: "Unable to sync"))
+                }
+            internalState.update { it.copy(syncing = false) }
+        }
+    }
+
+    private fun ShareState.toUiState(internal: InternalState, lists: List<ListEntity>): ShareUiState {
         val link = internal.inviteLink ?: lastInvite?.let { inviteLinkBuilder.build(it) }
+        val local = lists.map { list ->
+            val shared = sharedLists.firstOrNull { it.listId == list.id }
+            LocalShareList(id = list.id, name = list.name, shared = shared)
+        }
         return ShareUiState(
             selectedTransport = selectedTransport,
             driveAccount = drive.account,
@@ -163,6 +215,8 @@ class ShareViewModel @Inject constructor(
             showAccountPicker = internal.showAccountPicker,
             availableAccounts = internal.accounts,
             sharedLists = sharedLists,
+            localLists = local,
+            inviteListId = internal.inviteListId,
             syncing = internal.syncing
         )
     }
@@ -179,6 +233,13 @@ class ShareViewModel @Inject constructor(
         val showAccountPicker: Boolean = false,
         val accounts: List<DriveAccount> = emptyList(),
         val inviteLink: String? = null,
+        val inviteListId: Long? = null,
         val syncing: Boolean = false
     )
 }
+
+data class LocalShareList(
+    val id: Long,
+    val name: String,
+    val shared: com.letsdoit.app.share.SharedList?
+)

@@ -47,6 +47,7 @@ data class ShareInvite(
 
 @JsonClass(generateAdapter = true)
 data class SharedList(
+    val listId: Long,
     val shareId: String,
     val transport: ShareTransport,
     val key: String,

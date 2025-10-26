@@ -180,6 +180,11 @@
     <string name="share_invite_link">Invite link</string>
     <string name="share_shared_lists_title">Joined lists</string>
     <string name="share_shared_list_joined">Joined %1$s</string>
+    <string name="share_local_lists_title">Your lists</string>
+    <string name="share_create_share">Create share</string>
+    <string name="share_show_invite">Show invite</string>
+    <string name="share_sync_list">Sync list</string>
+    <string name="share_no_shared_lists">Create a share before inviting others</string>
     <string name="share_no_peers">No nearby devices yet</string>
     <string name="share_link_copied">Link copied</string>
     <string name="share_no_accounts">No Drive accounts found</string>

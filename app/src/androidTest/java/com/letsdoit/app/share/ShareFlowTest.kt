@@ -65,7 +65,9 @@ class ShareFlowTest {
     fun inviteGeneratesAndJoinStoresSharedList() {
         openSettings()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.share_title)).performClick()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.share_invite_generate)).performClick()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.share_create_share)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.share_show_invite)).performClick()
         composeRule.waitForIdle()
         val inviteState = runBlocking { shareRepository.shareState.first { it.lastInvite != null } }
         val invite = requireNotNull(inviteState.lastInvite)

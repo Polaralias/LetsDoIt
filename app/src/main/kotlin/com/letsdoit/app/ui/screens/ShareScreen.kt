@@ -89,7 +89,6 @@ fun ShareScreen(
             }
             InviteSection(
                 state = state,
-                onGenerate = viewModel::generateInvite,
                 onCopy = {
                     state.inviteLink?.let { link ->
                         clipboard.setText(AnnotatedString(link))
@@ -98,7 +97,12 @@ fun ShareScreen(
                 },
                 onOpenJoin = onOpenJoin
             )
-            SharedListsSection(state = state)
+            SharedListsSection(
+                state = state,
+                onCreateShare = viewModel::createShare,
+                onShowInvite = viewModel::generateInvite,
+                onSyncList = viewModel::syncList
+            )
         }
     }
     if (state.showAccountPicker) {
@@ -239,12 +243,9 @@ private fun NearbySection(
 }
 
 @Composable
-private fun InviteSection(state: ShareUiState, onGenerate: () -> Unit, onCopy: () -> Unit, onOpenJoin: () -> Unit) {
+private fun InviteSection(state: ShareUiState, onCopy: () -> Unit, onOpenJoin: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(text = stringResource(id = R.string.share_invite_title), style = MaterialTheme.typography.titleMedium)
-        Button(onClick = onGenerate) {
-            Text(text = stringResource(id = R.string.share_invite_generate))
-        }
         state.inviteLink?.let { link ->
             OutlinedTextField(
                 value = link,
@@ -258,35 +259,72 @@ private fun InviteSection(state: ShareUiState, onGenerate: () -> Unit, onCopy: (
                 Button(onClick = onCopy) {
                     Text(text = stringResource(id = R.string.share_invite_copy))
                 }
-                TextButton(onClick = onOpenJoin) {
-                    Text(text = stringResource(id = R.string.share_invite_join))
-                }
             }
             val qr = remember(link) { generateQrBitmap(link) }
             qr?.let {
                 Image(bitmap = it, contentDescription = stringResource(id = R.string.share_invite_qr), modifier = Modifier.size(200.dp))
             }
         }
+        TextButton(onClick = onOpenJoin) {
+            Text(text = stringResource(id = R.string.share_invite_join))
+        }
     }
 }
 
 @Composable
-private fun SharedListsSection(state: ShareUiState) {
+private fun SharedListsSection(
+    state: ShareUiState,
+    onCreateShare: (Long) -> Unit,
+    onShowInvite: (Long) -> Unit,
+    onSyncList: (Long) -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val context = LocalContext.current
-        Text(text = stringResource(id = R.string.share_shared_lists_title), style = MaterialTheme.typography.titleMedium)
-        if (state.sharedLists.isEmpty()) {
+        Text(text = stringResource(id = R.string.share_local_lists_title), style = MaterialTheme.typography.titleMedium)
+        if (state.localLists.isEmpty()) {
             Text(text = stringResource(id = R.string.share_invite_join), style = MaterialTheme.typography.bodyMedium)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                state.sharedLists.forEach { shared ->
-                    val joined = remember(shared.joinedAt, context) {
-                        val date = Date(shared.joinedAt)
-                        DateFormat.getMediumDateFormat(context).format(date) + " " + DateFormat.getTimeFormat(context).format(date)
-                    }
-                    Column {
-                        Text(text = shared.shareId, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(text = stringResource(id = R.string.share_shared_list_joined, joined), style = MaterialTheme.typography.bodySmall)
+                state.localLists.forEach { local ->
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(text = local.name, style = MaterialTheme.typography.bodyLarge)
+                        val shared = local.shared
+                        if (shared == null) {
+                            Button(onClick = { onCreateShare(local.id) }) {
+                                Text(text = stringResource(id = R.string.share_create_share))
+                            }
+                        } else {
+                            val joined = remember(shared.joinedAt, context) {
+                                val date = Date(shared.joinedAt)
+                                DateFormat.getMediumDateFormat(context).format(date) + " " + DateFormat.getTimeFormat(context).format(date)
+                            }
+                            Text(text = shared.shareId, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                text = stringResource(id = R.string.share_shared_list_joined, joined),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { onShowInvite(local.id) }) {
+                                    Text(text = stringResource(id = R.string.share_show_invite))
+                                }
+                                Button(onClick = { onSyncList(local.id) }) {
+                                    Text(text = stringResource(id = R.string.share_sync_list))
+                                }
+                            }
+                            if (state.inviteListId == local.id && state.inviteLink != null) {
+                                Text(
+                                    text = stringResource(id = R.string.share_invite_link),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                OutlinedTextField(
+                                    value = state.inviteLink,
+                                    onValueChange = {},
+                                    modifier = Modifier.fillMaxWidth(),
+                                    readOnly = true,
+                                    singleLine = true
+                                )
+                            }
+                        }
                     }
                     Divider()
                 }

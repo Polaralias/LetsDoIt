@@ -12,3 +12,4 @@
 app/build/
 
 gradle/wrapper/gradle-wrapper.jar
+local-plugin-repo/**/*.jar

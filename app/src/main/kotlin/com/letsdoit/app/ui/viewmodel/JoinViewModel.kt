@@ -1,10 +1,12 @@
 package com.letsdoit.app.ui.viewmodel
 
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.letsdoit.app.share.InviteLinkParser
 import com.letsdoit.app.share.ShareRepository
 import com.letsdoit.app.share.SharedList
+import com.letsdoit.app.data.task.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -29,7 +31,8 @@ sealed class JoinEvent {
 @HiltViewModel
 class JoinViewModel @Inject constructor(
     private val parser: InviteLinkParser,
-    private val repository: ShareRepository
+    private val repository: ShareRepository,
+    private val taskRepository: TaskRepository
 ) : ViewModel() {
     private val state = MutableStateFlow(JoinUiState())
     private val _events = MutableSharedFlow<JoinEvent>()
@@ -61,14 +64,9 @@ class JoinViewModel @Inject constructor(
             state.update { it.copy(processing = true, errorMessage = null) }
             runCatching { parser.parse(link) }
                 .onSuccess { invite ->
-                    val shared = SharedList(
-                        shareId = invite.shareId,
-                        transport = invite.transport,
-                        key = invite.key,
-                        driveFolderId = invite.driveFolderId,
-                        joinedAt = System.currentTimeMillis()
-                    )
-                    repository.addSharedList(shared)
+                    val listId = taskRepository.ensureDefaultList()
+                    val keyBytes = Base64.decode(invite.key, Base64.NO_WRAP)
+                    val shared = repository.joinSharedList(listId, invite.shareId, keyBytes, invite.transport)
                     state.update { it.copy(joined = shared, processing = false) }
                     _events.emit(JoinEvent.Message("Joined shared list"))
                 }
