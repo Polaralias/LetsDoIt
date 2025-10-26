@@ -1,6 +1,5 @@
 buildscript {
     repositories {
-        maven(url = uri("${rootDir}/local-plugin-repo"))
         google()
         mavenCentral()
     }

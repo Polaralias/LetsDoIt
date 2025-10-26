@@ -1,20 +1,6 @@
 pluginManagement {
     repositories {
-        maven(url = uri("${rootDir}/local-plugin-repo"))
         gradlePluginPortal()
-        maven(url = uri("https://dl.google.com/android/maven2/")) {
-            metadataSources {
-                mavenPom()
-                artifact()
-            }
-        }
-        maven(url = uri("https://dl.google.com/dl/android/maven2/")) {
-            metadataSources {
-                mavenPom()
-                artifact()
-            }
-        }
-        maven(url = uri("https://maven.google.com"))
         google()
         mavenCentral()
     }
