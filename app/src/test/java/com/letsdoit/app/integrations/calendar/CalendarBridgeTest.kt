@@ -58,6 +58,7 @@ class CalendarBridgeTest {
             assertEquals(newStart.toEpochMilli(), values.getAsLong(CalendarContract.Events.DTSTART))
             assertEquals(newEnd.toEpochMilli(), values.getAsLong(CalendarContract.Events.DTEND))
             assertEquals(zoneId.id, values.getAsString(CalendarContract.Events.EVENT_TIMEZONE))
+            assertEquals(zoneId.id, values.getAsString(CalendarContract.Events.EVENT_END_TIMEZONE))
             assertNull(values.get(CalendarContract.Events.DURATION))
         } finally {
             TimeZone.setDefault(originalZone)
