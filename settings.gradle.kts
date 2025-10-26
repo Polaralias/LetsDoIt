@@ -29,3 +29,4 @@ dependencyResolutionManagement {
 rootProject.name = "letsdoit"
 include(":app")
 include(":baselineprofile")
+include(":benchmark")
