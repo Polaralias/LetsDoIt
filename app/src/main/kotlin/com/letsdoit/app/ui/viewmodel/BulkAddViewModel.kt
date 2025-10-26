@@ -348,12 +348,17 @@ class BulkAddViewModel @Inject constructor(
         }
     }
 
-    private fun recordCalendar(items: List<BulkCreateItem>, ids: List<Long>) {
+    private suspend fun recordCalendar(items: List<BulkCreateItem>, ids: List<Long>) {
+        if (items.isEmpty() || ids.isEmpty()) return
         val now = Instant.now(clock)
-        items.zip(ids).forEach { (item, _) ->
+        items.forEachIndexed { index, item ->
+            val taskId = ids.getOrNull(index) ?: return@forEachIndexed
             item.dueAt?.let { due ->
                 if (due.isAfter(now)) {
-                    calendarBridge.insertEvent(item.title, due)
+                    val eventId = calendarBridge.insertEvent(item.title, due)
+                    if (eventId != null) {
+                        taskRepository.linkCalendarEvent(taskId, eventId)
+                    }
                 }
             }
         }

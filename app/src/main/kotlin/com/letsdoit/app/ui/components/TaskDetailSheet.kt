@@ -80,7 +80,8 @@ fun TaskDetailSheet(
     onSave: (String?, Int?) -> Unit,
     subtasks: List<Subtask>,
     onToggleSubtask: (Subtask) -> Unit,
-    onMoveSubtask: (Int, Int) -> Unit
+    onMoveSubtask: (Int, Int) -> Unit,
+    onRemoveFromCalendar: () -> Unit
 ) {
     val zoneId = ZoneId.systemDefault()
     val presets = remember(task.id, task.dueAt) { recurrencePresets(zoneId, task.dueAt) }
@@ -322,6 +323,11 @@ fun TaskDetailSheet(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (task.calendarEventId != null) {
+                    TextButton(onClick = onRemoveFromCalendar, modifier = Modifier.minimumInteractiveComponentSize()) {
+                        Text(text = stringResource(id = R.string.action_remove_from_calendar))
+                    }
+                }
                 TextButton(
                     onClick = {
                         currentRule = null
