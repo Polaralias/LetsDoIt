@@ -19,6 +19,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlin.test.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -54,6 +55,14 @@ class TodayTasksWidgetTest {
     }
 
     @Test
+    fun showsEmptyStateWhenNoTasks() {
+        glanceRule.setAppWidget(TodayTasksWidget)
+        glanceRule.waitForIdle()
+        val emptyText = context.getString(R.string.widget_empty_today)
+        glanceRule.onNode(hasText(emptyText)).assertExists()
+    }
+
+    @Test
     fun toggleMarksTaskCompleteAndRefreshesWidget() = runBlocking {
         val now = Instant.now()
         val task = Task(
@@ -81,6 +90,7 @@ class TodayTasksWidgetTest {
 
         glanceRule.onNode(isToggleable().and(hasText("Morning stretch"))).performClick()
         awaitCondition { taskRepository.completionUpdates.contains(task.id to true) }
+        assertTrue(taskRepository.completionUpdates.contains(task.id to true))
         glanceRule.waitForIdle()
 
         val emptyText = context.getString(R.string.widget_empty_today)
