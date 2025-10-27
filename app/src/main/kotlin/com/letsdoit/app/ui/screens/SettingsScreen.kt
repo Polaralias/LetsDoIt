@@ -58,6 +58,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.letsdoit.app.R
+import com.letsdoit.app.ai.speech.SpeechEngineId
+import com.letsdoit.app.ai.speech.SpeechSettings
 import com.letsdoit.app.backup.BackupError
 import com.letsdoit.app.integrations.alarm.ExactAlarmPermissionStatus
 import com.letsdoit.app.ui.viewmodel.BackupUiState
@@ -95,6 +97,8 @@ fun SettingsScreen(
     val backupState by viewModel.backupState.collectAsState()
     val diagnosticsState by viewModel.diagnosticsState.collectAsState()
     val exactAlarmStatus by viewModel.exactAlarmPermission.collectAsState()
+    val speechSettings by viewModel.speechSettings.collectAsState()
+    val speechEngines = viewModel.speechEngines
     val presets = viewModel.presets
     val accentPromptPresets = viewModel.accentPromptPresets
     val formatter = remember {
@@ -104,6 +108,7 @@ fun SettingsScreen(
     }
     val showRestoreConfirm = remember { mutableStateOf(false) }
     val showManageDialog = remember { mutableStateOf(false) }
+    val pendingCloudEngine = remember { mutableStateOf<SpeechEngineId?>(null) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val shareTitle = stringResource(id = R.string.diagnostics_share_title)
@@ -182,6 +187,18 @@ fun SettingsScreen(
         Button(onClick = { viewModel.saveOpenAiKey() }, modifier = Modifier.minimumInteractiveComponentSize()) {
             Text(text = stringResource(id = R.string.action_save))
         }
+        SpeechSettingsSection(
+            engines = speechEngines,
+            settings = speechSettings,
+            onSelectEngine = { engine ->
+                if (engine.isCloud() && !speechSettings.cloudConsent) {
+                    pendingCloudEngine.value = engine
+                } else {
+                    viewModel.setSpeechEngine(engine)
+                }
+            },
+            onToggleConsent = viewModel::setCloudConsent
+        )
         Text(text = stringResource(id = R.string.diagnostics_title), style = MaterialTheme.typography.titleMedium)
         ThemeToggleRow(
             text = stringResource(id = R.string.diagnostics_enable),
@@ -453,6 +470,68 @@ fun SettingsScreen(
             }
         )
     }
+
+    pendingCloudEngine.value?.let { engine ->
+        AlertDialog(
+            onDismissRequest = { pendingCloudEngine.value = null },
+            title = { Text(text = stringResource(id = R.string.settings_speech_consent_title)) },
+            text = { Text(text = stringResource(id = R.string.settings_speech_consent_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingCloudEngine.value = null
+                        viewModel.enableCloudConsentAndSelect(engine)
+                    },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
+                    Text(text = stringResource(id = R.string.settings_speech_consent_allow))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingCloudEngine.value = null },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
+                    Text(text = stringResource(id = R.string.settings_speech_consent_cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SpeechSettingsSection(
+    engines: List<SpeechEngineId>,
+    settings: SpeechSettings,
+    onSelectEngine: (SpeechEngineId) -> Unit,
+    onToggleConsent: (Boolean) -> Unit
+) {
+    Text(text = stringResource(id = R.string.settings_ai_section), style = MaterialTheme.typography.titleMedium)
+    Text(text = stringResource(id = R.string.settings_speech_title), style = MaterialTheme.typography.bodyMedium)
+    Text(text = stringResource(id = R.string.settings_speech_engine_label), style = MaterialTheme.typography.bodySmall)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        engines.forEach { engine ->
+            val label = when (engine) {
+                SpeechEngineId.Local -> stringResource(id = R.string.settings_speech_engine_local)
+                SpeechEngineId.GoogleCloud -> stringResource(id = R.string.settings_speech_engine_google_cloud)
+                SpeechEngineId.Azure -> stringResource(id = R.string.settings_speech_engine_azure)
+            }
+            FilterChip(
+                selected = settings.engine == engine,
+                onClick = { onSelectEngine(engine) },
+                label = { Text(text = label) },
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .semantics { contentDescription = label }
+            )
+        }
+    }
+    ThemeToggleRow(
+        text = stringResource(id = R.string.settings_speech_cloud_toggle),
+        checked = settings.cloudConsent,
+        onToggle = onToggleConsent,
+        description = stringResource(id = R.string.accessibility_toggle_cloud_transcription)
+    )
 }
 
 @Composable

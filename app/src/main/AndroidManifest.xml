@@ -70,5 +70,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/diagnostics_paths" />
         </provider>
+
+        <service
+            android:name=".ai.speech.RecordingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
     </application>
 </manifest>
