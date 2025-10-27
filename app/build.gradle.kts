@@ -1,9 +1,9 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("com.google.dagger.hilt.android")
-    id("org.jetbrains.kotlin.kapt")
-    id("androidx.baselineprofile")
+    id("com.android.application") version "8.5.1"
+    id("org.jetbrains.kotlin.android") version "1.9.24"
+    id("com.google.dagger.hilt.android") version "2.51.1"
+    id("org.jetbrains.kotlin.kapt") version "1.9.24"
+    id("androidx.baselineprofile") version "1.2.4"
 }
 
 android {
