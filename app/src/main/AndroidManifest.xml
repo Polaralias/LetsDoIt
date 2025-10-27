@@ -30,7 +30,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.letsdoit.app.REMINDER" />
+                <action android:name="com.polaralias.letsdoit.REMINDER" />
             </intent-filter>
         </receiver>
 
