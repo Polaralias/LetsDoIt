@@ -1,6 +1,8 @@
-apply(plugin = "com.android.test")
-apply(plugin = "org.jetbrains.kotlin.android")
-apply(plugin = "androidx.benchmark")
+plugins {
+    id("com.android.test")
+    id("org.jetbrains.kotlin.android")
+    id("androidx.benchmark")
+}
 
 android {
     namespace = "com.polaralias.letsdoit.benchmark"
