@@ -20,6 +20,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
@@ -84,21 +85,54 @@ class ReminderNotificationsTest {
         )
         val channel = NotificationManagerCompat.from(context).getNotificationChannel(REMINDER_CHANNEL_ID)
         assertNotNull(channel)
+        assertEquals(REMINDER_CHANNEL_ID, channel.id)
+        assertEquals("Reminders", channel.name?.toString())
         assertEquals(NotificationManagerCompat.IMPORTANCE_HIGH, channel.importance)
     }
 
     @Test
-    fun reminderActionsDispatchReceivers() = runBlocking {
-        val task = Task(
+    fun completeActionMarksTaskDone() = runBlocking {
+        val task = buildTask()
+        taskRepository.setTasks(listOf(task))
+
+        ReminderActionReceiver.buildCompleteIntent(context, task.id).send()
+
+        awaitCondition { taskRepository.completionUpdates.contains(task.id to true) }
+        assertTrue(taskRepository.completionUpdates.contains(task.id to true))
+    }
+
+    @Test
+    fun snoozeTenMinutesActionNotifiesCoordinator() = runBlocking {
+        val task = buildTask()
+        taskRepository.setTasks(listOf(task))
+
+        ReminderActionReceiver.buildSnoozeIntent(context, task.id, 10).send()
+
+        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 10L)
+    }
+
+    @Test
+    fun snoozeHourActionNotifiesCoordinator() = runBlocking {
+        val task = buildTask()
+        taskRepository.setTasks(listOf(task))
+
+        ReminderActionReceiver.buildSnoozeIntent(context, task.id, 60).send()
+
+        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 60L)
+    }
+
+    private fun buildTask(): Task {
+        val instant = Instant.now()
+        return Task(
             id = 42L,
             listId = 1L,
             title = "Tea time",
             notes = null,
-            dueAt = Instant.now(),
+            dueAt = instant,
             repeatRule = null,
             remindOffsetMinutes = null,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now(),
+            createdAt = instant,
+            updatedAt = instant,
             completed = false,
             priority = 2,
             orderInList = 0,
@@ -107,16 +141,6 @@ class ReminderNotificationsTest {
             calendarEventId = null,
             column = "To do"
         )
-        taskRepository.setTasks(listOf(task))
-
-        ReminderActionReceiver.buildCompleteIntent(context, task.id).send()
-        awaitCondition { taskRepository.completionUpdates.contains(task.id to true) }
-
-        ReminderActionReceiver.buildSnoozeIntent(context, task.id, 10).send()
-        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 10)
-
-        ReminderActionReceiver.buildSnoozeIntent(context, task.id, 60).send()
-        verify(reminderCoordinator, timeout(1000)).snooze(task.id, 60)
     }
 
     private suspend fun awaitCondition(timeoutMillis: Long = 2000, predicate: () -> Boolean) {
