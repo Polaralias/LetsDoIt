@@ -1,8 +1,10 @@
-apply(plugin = "com.android.application")
-apply(plugin = "org.jetbrains.kotlin.android")
-apply(plugin = "com.google.dagger.hilt.android")
-apply(plugin = "org.jetbrains.kotlin.kapt")
-apply(plugin = "androidx.baselineprofile")
+plugins {
+    id("com.android.application") version "8.5.1"
+    id("org.jetbrains.kotlin.android") version "1.9.24"
+    id("com.google.dagger.hilt.android") version "2.51.1"
+    id("org.jetbrains.kotlin.kapt") version "1.9.24"
+    id("androidx.baselineprofile") version "1.2.4"
+}
 
 android {
     namespace = "com.polaralias.letsdoit"
