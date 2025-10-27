@@ -5,11 +5,11 @@ apply(plugin = "org.jetbrains.kotlin.kapt")
 apply(plugin = "androidx.baselineprofile")
 
 android {
-    namespace = "com.letsdoit.app"
+    namespace = "com.polaralias.letsdoit"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.letsdoit.app"
+        applicationId = "com.polaralias.letsdoit"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

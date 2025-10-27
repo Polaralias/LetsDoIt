@@ -3,7 +3,7 @@ apply(plugin = "org.jetbrains.kotlin.android")
 apply(plugin = "androidx.baselineprofile")
 
 android {
-    namespace = "com.letsdoit.app.baselineprofile"
+    namespace = "com.polaralias.letsdoit.baselineprofile"
     compileSdk = 35
 
     defaultConfig {

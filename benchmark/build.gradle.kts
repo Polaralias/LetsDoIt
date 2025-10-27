@@ -3,7 +3,7 @@ apply(plugin = "org.jetbrains.kotlin.android")
 apply(plugin = "androidx.benchmark")
 
 android {
-    namespace = "com.letsdoit.app.benchmark"
+    namespace = "com.polaralias.letsdoit.benchmark"
     compileSdk = 35
 
     defaultConfig {
