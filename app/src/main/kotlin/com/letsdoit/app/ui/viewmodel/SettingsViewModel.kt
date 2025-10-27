@@ -9,6 +9,9 @@ import androidx.lifecycle.viewModelScope
 import com.letsdoit.app.accent.AccentGenerationException
 import com.letsdoit.app.accent.AccentGenerator
 import com.letsdoit.app.accent.AccentPackInfo
+import com.letsdoit.app.ai.speech.SpeechEngineId
+import com.letsdoit.app.ai.speech.SpeechSettings
+import com.letsdoit.app.ai.speech.SpeechSettingsRepository
 import com.letsdoit.app.backup.BackupInfo
 import com.letsdoit.app.backup.BackupManager
 import com.letsdoit.app.backup.BackupStatusError
@@ -93,6 +96,7 @@ class SettingsViewModel @Inject constructor(
     private val presetProvider: PresetProvider,
     private val accentManager: AccentManager,
     private val accentGenerator: AccentGenerator,
+    private val speechSettingsRepository: SpeechSettingsRepository,
     private val syncStatusRepository: SyncStatusRepository,
     private val taskSyncStateManager: TaskSyncStateManager,
     private val backupManager: BackupManager,
@@ -119,6 +123,11 @@ class SettingsViewModel @Inject constructor(
     val accentGeneration: StateFlow<AccentGenerationState> = _accentGeneration.asStateFlow()
 
     val presets = presetProvider.presets()
+
+    val speechSettings: StateFlow<SpeechSettings> = speechSettingsRepository.settings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SpeechSettings())
+
+    val speechEngines: List<SpeechEngineId> = SpeechEngineId.entries
 
     val accentPromptPresets = listOf(
         R.string.accent_prompt_preset_trees,
@@ -196,6 +205,25 @@ class SettingsViewModel @Inject constructor(
     fun onAccentPromptChanged(value: String) {
         _accentGeneration.update { state ->
             state.copy(prompt = value, error = null)
+        }
+    }
+
+    fun setSpeechEngine(engine: SpeechEngineId) {
+        viewModelScope.launch {
+            speechSettingsRepository.updateEngine(engine)
+        }
+    }
+
+    fun setCloudConsent(enabled: Boolean) {
+        viewModelScope.launch {
+            speechSettingsRepository.updateCloudConsent(enabled)
+        }
+    }
+
+    fun enableCloudConsentAndSelect(engine: SpeechEngineId) {
+        viewModelScope.launch {
+            speechSettingsRepository.updateCloudConsent(true)
+            speechSettingsRepository.updateEngine(engine)
         }
     }
 
