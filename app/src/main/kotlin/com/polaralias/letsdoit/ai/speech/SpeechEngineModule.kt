@@ -1,17 +1,19 @@
 package com.polaralias.letsdoit.ai.speech
 
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoMap
+import javax.inject.Singleton
 
 @InstallIn(SingletonComponent::class)
 @Module
-abstract class SpeechEngineModule {
-    @Binds
-    @IntoMap
-    @SpeechEngineKey(SpeechEngineId.Local)
-    abstract fun bindLocalEngine(engine: LocalSpeechRecognizerEngine): SttEngine
-
+object SpeechEngineModule {
+    @Provides
+    @Singleton
+    fun provideSpeechEngines(
+        localEngine: LocalSpeechRecognizerEngine
+    ): Map<SpeechEngineId, @JvmSuppressWildcards SttEngine> {
+        return mapOf(SpeechEngineId.Local to localEngine)
+    }
 }
