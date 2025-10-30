@@ -93,12 +93,12 @@ class AiRouter @Inject constructor(
         }
     }
 
-    suspend fun generateStickers(prompt: String, variants: Int, size: String): AccentPackInfo {
+    suspend fun generateStickers(prompt: String, variants: Int, size: String): GeneratedAccentPack {
         val settings = settingsRepository.settings.first()
         val providerId = settings.imageProvider
         val provider = imageProviders[providerId] ?: throw IllegalStateException("Image provider unavailable")
         val images = provider.generateStickers(prompt, variants, size)
-        return AccentPackInfo(images)
+        return GeneratedAccentPack(images)
     }
 
     private suspend fun executeParsing(input: AiInput): AiParseResult {
@@ -257,4 +257,4 @@ class AiRouter @Inject constructor(
     }
 }
 
-data class AccentPackInfo(val images: List<ByteArray>)
+data class GeneratedAccentPack(val images: List<ByteArray>)
