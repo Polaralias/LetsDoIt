@@ -48,7 +48,6 @@ import com.polaralias.letsdoit.ui.viewmodel.MainViewModel
 import com.polaralias.letsdoit.ui.viewmodel.SearchViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import androidx.navigation.NavHostController
 import androidx.navigation.navArgument
