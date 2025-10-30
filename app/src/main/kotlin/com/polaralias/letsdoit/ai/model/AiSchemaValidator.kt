@@ -1,7 +1,10 @@
 package com.polaralias.letsdoit.ai.model
 
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AiSchemaValidator {
+@Singleton
+class AiSchemaValidator @Inject constructor() {
     fun validate(result: AiParseResult): SchemaValidationResult {
         val errors = mutableListOf<String>()
         if (result.complexity_score < 0.0 || result.complexity_score > 1.0) {
