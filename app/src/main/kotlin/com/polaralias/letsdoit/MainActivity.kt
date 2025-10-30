@@ -143,7 +143,14 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 ) { padding ->
-                    AppNavGraph(padding, navController, deepLinkEvents, timelineFocusEvents, bulkAddRequests)
+                    AppNavGraph(
+                        padding = padding,
+                        navController = navController,
+                        deepLinks = deepLinkEvents,
+                        timelineFocus = timelineFocusEvents,
+                        bulkAddRequests = bulkAddRequests,
+                        searchViewModel = searchViewModel
+                    )
                 }
             }
         }
@@ -172,7 +179,8 @@ private fun AppNavGraph(
     navController: NavHostController,
     deepLinks: SharedFlow<String>,
     timelineFocus: SharedFlow<Long>,
-    bulkAddRequests: SharedFlow<String?>
+    bulkAddRequests: SharedFlow<String?>,
+    searchViewModel: SearchViewModel
 ) {
     androidx.compose.runtime.LaunchedEffect(deepLinks) {
         deepLinks.collect { link ->
