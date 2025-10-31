@@ -14,4 +14,3 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version = "2.51.1" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version = "1.2.4" }
-androidx-benchmark = { id = "androidx.benchmark", version = "1.2.4" }
