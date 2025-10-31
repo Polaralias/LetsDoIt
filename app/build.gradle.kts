@@ -1,9 +1,9 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt.android)
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.androidx.baselineprofile)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.kapt")
+    id("com.google.dagger.hilt.android")
+    id("androidx.baselineprofile")
 }
 
 android {
@@ -36,6 +36,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf("-Xuse-k2=false")
     }
 
     buildFeatures {
@@ -43,7 +44,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
+        kotlinCompilerExtensionVersion = "1.5.16"
     }
 
     packaging {
@@ -143,5 +144,7 @@ dependencies {
     androidTestImplementation("org.mockito:mockito-android:5.12.0")
     androidTestImplementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
     kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
-    baselineProfile(project(":baselineprofile"))
+    rootProject.findProject(":baselineprofile")?.let {
+        baselineProfile(project(it.path))
+    }
 }

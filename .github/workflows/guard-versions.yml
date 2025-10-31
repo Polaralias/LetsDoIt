@@ -1,0 +1,31 @@
+name: Guard plugin versions
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect unauthorised plugin version bumps
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          CHANGED=$(git diff --name-only "${BASE_SHA}"...HEAD)
+          if echo "$CHANGED" | grep -qE '(^|/)settings\.gradle\.kts|(^|/)gradle/libs\.versions\.toml'; then
+            if git diff "${BASE_SHA}"...HEAD -- settings.gradle.kts gradle/libs.versions.toml | grep -qE 'com\.android\.(application|library|test)|org\.jetbrains\.kotlin\.(android|kapt)|agp|kotlin'; then
+              echo "Plugin version change detected"
+              echo "Requires label: allow-plugin-bump"
+              labels_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels"
+              if ! curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" "${labels_url}" | grep -q '"name": "allow-plugin-bump"'; then
+                echo "Missing label"
+                exit 1
+              fi
+            fi
+          fi

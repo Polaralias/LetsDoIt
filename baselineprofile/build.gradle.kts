@@ -1,7 +1,7 @@
 plugins {
-    alias(libs.plugins.android.test)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.androidx.baselineprofile)
+    id("com.android.test")
+    id("org.jetbrains.kotlin.android")
+    id("androidx.baselineprofile")
 }
 
 android {
@@ -21,6 +21,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf("-Xuse-k2=false")
     }
 
     targetProjectPath = ":app"

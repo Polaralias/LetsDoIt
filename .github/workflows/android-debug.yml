@@ -18,6 +18,8 @@ jobs:
         with:
           lfs: true
           fetch-depth: 0
+      - name: Assert no Kotlin plugin versions in subprojects
+        run: .github/scripts/assert-no-plugin-versions.sh
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,7 +28,7 @@ jobs:
         with:
           gradle-version: wrapper
       - name: Build debug artefact
-        run: ./gradlew --no-daemon clean lint test :app:assembleDebug
+        run: ./gradlew --no-daemon clean lint test :app:assembleDebug -Dkotlin.compiler.execution.strategy=in-process
       - name: Upload debug artefact
         uses: actions/upload-artifact@v4
         with:

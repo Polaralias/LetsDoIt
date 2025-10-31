@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.android.test)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.test")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -31,6 +31,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf("-Xuse-k2=false")
     }
 }
 
