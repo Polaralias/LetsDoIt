@@ -1,9 +1,9 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("com.google.dagger.hilt.android")
-    id("org.jetbrains.kotlin.kapt")
-    id("androidx.baselineprofile")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
@@ -81,6 +81,9 @@ baselineProfile {
 }
 
 dependencies {
+    implementation(platform(libs.kotlin.bom))
+    implementation(libs.kotlin.stdlib)
+
     implementation(platform("androidx.compose:compose-bom:2024.05.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

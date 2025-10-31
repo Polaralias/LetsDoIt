@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.test")
-    id("org.jetbrains.kotlin.android")
-    id("androidx.baselineprofile")
+    alias(libs.plugins.android.test)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
