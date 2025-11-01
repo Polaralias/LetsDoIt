@@ -6,6 +6,15 @@ plugins {
     alias(libs.plugins.androidx.baselineprofile)
 }
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = true
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
 android {
     namespace = "com.polaralias.letsdoit"
     compileSdk = 35
