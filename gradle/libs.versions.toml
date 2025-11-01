@@ -1,6 +1,6 @@
 [versions]
 agp = "8.5.2"
-kotlin = "1.9.22" # Align with Compose compiler 1.5.14 compatibility
+kotlin = "1.9.24" # Align with Compose compiler 1.5.14 compatibility
 
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }

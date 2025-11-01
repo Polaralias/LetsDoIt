@@ -2,7 +2,7 @@
 
 ## Tooling stack
 - **Gradle Wrapper 8.10.2** works with **Android Gradle Plugin (AGP) 8.5.2**, covering all modules and enabling the latest Java 17 toolchain support.
-- **Kotlin 1.9.22** (Android and KAPT plugins) matches the binary metadata produced by the **Jetpack Compose compiler extension 1.5.14**, which avoids the "Could not load module <Error module>" crashes emitted by kapt.
+- **Kotlin 1.9.24** (Android and KAPT plugins) matches the binary metadata produced by the **Jetpack Compose compiler extension 1.5.14**, keeping annotation processing stable.
 - **Jetpack Compose BOM 2024.05.00** keeps UI artifacts (Material 3, tooling, icons) on the same release train that the 1.5.14 compiler targets.
 
 ## Dependency families
@@ -14,5 +14,5 @@
 - **Testing stack**: AndroidX Test JUnit, runner, rules, and UIAutomator libraries are aligned on the 1.5.x family, keeping instrumentation behavior consistent.
 
 ## Observations
-- The Compose compiler/KAPT crash was traced to running Kotlin 1.9.24 with the 1.5.14 Compose compiler. Keeping Kotlin on 1.9.22 prevents the metadata mismatch that previously broke annotation processing.
+- Kotlin 1.9.24 continues to work with the 1.5.14 Compose compiler when paired with the matching Compose BOM, and no kapt issues have been observed with this configuration.
 - No additional version conflicts were observed across module dependency graphs after aligning the tooling stack.
