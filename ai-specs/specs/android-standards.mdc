@@ -1,0 +1,159 @@
+---
+description: Android app development standards, best practices, and patterns for AI coding agents
+globs:
+  [
+    "android/**/*.{kt,kts,java,xml}",
+    "app/src/**/*.{kt,kts,java,xml}",
+    "app/build.gradle*",
+    "android/build.gradle*",
+    "settings.gradle*",
+    "gradle.properties"
+  ]
+alwaysApply: false
+---
+
+# Android Development Standards
+
+These standards apply to all Android application code unless a project document explicitly says otherwise.
+
+## 1. Technology and language
+
+- Prefer **Kotlin** for all new Android code.
+- Use **Jetpack Compose** for UI in new features. Only use XML layout files when you are:
+  - Modifying existing XML based screens.
+  - Integrating legacy components that are not Compose ready.
+- Use the **Android Jetpack** libraries where appropriate:
+  - `ViewModel`, `LiveData` or `StateFlow`, `Navigation`, `Room`, `DataStore`, `WorkManager`.
+
+When an existing project uses Java or XML heavily, follow the established style in that module and do not mix paradigms without a clear migration plan.
+
+## 2. Architecture
+
+Follow a clean architecture approach with clear separation of concerns.
+
+- Use **MVVM** as the default presentation pattern.
+- Create distinct layers:
+  - `presentation` (UI and ViewModels)
+  - `domain` (use cases and business logic)
+  - `data` (repositories and data sources)
+- ViewModels:
+  - Expose UI state using `StateFlow`, `SharedFlow` or `MutableState` for Compose.
+  - Avoid Android framework types in the domain layer.
+- Repositories:
+  - Hide data source details from the rest of the app.
+  - Provide suspend functions or reactive streams for consuming code.
+
+## 3. Project structure
+
+Prefer a modular structure in larger apps.
+
+- Split into modules such as:
+  - `core` (shared utilities, design system, common models)
+  - `feature-*` modules (per screen or feature)
+  - `data-*` modules (per data source if it is complex)
+- Do not create new modules for trivial features. Default to adding into existing relevant modules.
+
+Keep package names consistent and meaningful:
+
+- `com.company.app.feature.name`
+- `com.company.app.core.ui`
+- `com.company.app.data.api`
+
+## 4. UI and Compose standards
+
+- Follow a **single source of truth** for UI state per screen.
+- Use `@Composable` functions that:
+  - Are small and focused.
+  - Receive all dynamic data and callbacks via parameters.
+  - Do not access repositories, data sources or navigation directly.
+- Use a **design system**:
+  - Centralise colours, typography, shapes and spacing in a `designsystem` or `core/ui` module.
+  - Avoid hard coded values in composables. Use theme tokens instead.
+- Handle screen states explicitly:
+  - Loading
+  - Content
+  - Empty
+  - Error
+- Accessibility:
+  - Provide `contentDescription` for important images and icons.
+  - Ensure tap targets are large enough and layout supports dynamic font sizes.
+
+## 5. Navigation
+
+- Use the **Navigation Component** or **Compose Navigation** for in app navigation.
+- Define routes or destinations in a single place per feature.
+- Pass only the minimal arguments between screens. Prefer IDs over full objects.
+- Avoid storing `NavController` in ViewModels. Pass it from the composable, or use navigation events.
+
+## 6. Data, networking and persistence
+
+- Use a dedicated networking layer:
+  - Prefer Retrofit with OkHttp for HTTP APIs where suitable.
+  - Model responses with data classes and map them into domain models.
+- Error handling:
+  - Wrap remote calls in a result type (`Result<T>` or a sealed class).
+  - Distinguish between:
+    - Network errors
+    - Server errors
+    - Business rule errors
+- Persistence:
+  - Use Room for structured data, DataStore for key value preferences.
+  - Keep database entities separate from domain models.
+- Do not block the main thread:
+  - Use coroutines and `Dispatchers.IO` where appropriate.
+  - Any heavy work must be done off the UI thread.
+
+## 7. Dependency injection
+
+- Use **Hilt** as the default DI framework in new projects.
+- Provide modules for:
+  - Network clients
+  - Repositories
+  - Use cases
+- Do not manually construct dependencies inside ViewModels or composables.
+
+## 8. Coroutines and concurrency
+
+- Use structured concurrency:
+  - Launch coroutines within a suitable scope (`viewModelScope`, `lifecycleScope`).
+  - Cancel work when the scope is cancelled.
+- Use `suspend` functions for long running or IO operations.
+- Avoid global scope except for initialisation that clearly lives for the entire process lifetime.
+
+## 9. Testing
+
+- Types of tests:
+  - Unit tests for ViewModels, use cases and pure logic.
+  - Instrumentation tests for persistence and integration.
+  - UI tests using Compose testing APIs or Espresso for legacy views.
+- Testing rules:
+  - New logic in ViewModels and use cases must be covered by tests.
+  - Mock external dependencies rather than hitting real services.
+  - Keep tests deterministic and fast.
+
+## 10. Performance and reliability
+
+- Avoid unnecessary recompositions in Compose:
+  - Hoist state and use stable data structures.
+  - Use `remember` only where appropriate.
+- Use pagination for lists that may be large.
+- Use `WorkManager` for background work that must be guaranteed or persisted.
+- Monitor startup time and memory usage. When optimisation is required, prefer measuring before changing code.
+
+## 11. Security and privacy
+
+- Do not store secrets in the app binary or source code.
+- Use secure storage for sensitive user data.
+- Follow platform recommendations for permissions:
+  - Request permissions as late as possible.
+  - Provide rationale dialogs when appropriate.
+- If the app handles personal data, respect the project privacy and compliance requirements.
+
+## 12. AI coding agent guidance
+
+When acting as an AI coding agent on Android tasks:
+
+- Respect existing project patterns before introducing new libraries.
+- When adding dependencies, justify them and update Gradle files consistently.
+- Prefer small, incremental changes over large refactors.
+- Clearly explain breaking changes, migration steps and any required manual changes.

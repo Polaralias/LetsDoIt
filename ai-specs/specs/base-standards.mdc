@@ -1,0 +1,39 @@
+---
+description: This document contains all development rules and guidelines for this project, applicable to all AI agents (Claude, Cursor, Codex, Gemini, etc.).
+alwaysApply: true
+---
+
+## 1. Core Principles
+
+- **Small tasks, one at a time**: Always work in baby steps, one at a time. Never go forward more than one step.
+- **Test-Driven Development**: Start with failing tests for any new functionality (TDD), according to the task details.
+- **Type Safety**: All code must be fully typed.
+- **Clear Naming**: Use clear, descriptive names for all variables and functions.
+- **Incremental Changes**: Prefer incremental, focused changes over large, complex modifications.
+- **Question Assumptions**: Always question assumptions and inferences.
+- **Pattern Detection**: Detect and highlight repeated code patterns.
+
+## 2. Language Standards
+- **English Only**: All technical artifacts must always use English, including:
+    - Code (variables, functions, classes, comments, error messages, log messages)
+    - Documentation (README, guides, API docs)
+    - Jira tickets (titles, descriptions, comments)
+    - Data schemas and database names
+    - Configuration files and scripts
+    - Git commit messages
+    - Test names and descriptions
+
+## 3. Specific standards
+
+This document is the single entrypoint for all standards. When you start a task, follow the steps below to pull in the right `.mdc` files:
+
+1. Always read this file first; all rules here always apply.
+2. Add the domain-specific standards that match your work:
+   - [Backend Standards](./backend-standards.mdc) — API development, database patterns, testing, security, and backend best practices.
+   - [Frontend Standards](./frontend-standards.mdc) — React components, UI/UX guidelines, and frontend architecture.
+   - [Android Standards](./android-standards.mdc) — Android/Kotlin development conventions.
+   - [AI Tools Standards](./ai-tools-standards.mdc) — designing and implementing AI tools or automations.
+   - [Documentation Standards](./documentation-standards.mdc) — technical documentation structure, formatting, and maintenance (including AI standards like this document).
+
+If you work across multiple areas (for example, a feature with both backend and frontend changes), read and apply each relevant document.
+

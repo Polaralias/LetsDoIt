@@ -1,0 +1,152 @@
+---
+description: Standards and best practices for designing and implementing tools used by AI agents
+globs:
+  [
+    "tools/**/*.{ts,js,py,go,rb,cs,java}",
+    "services/tools/**/*.{ts,js,py,go,rb,cs,java}",
+    "ai-tools/**/*.{ts,js,py,go,rb,cs,java}",
+    "tooling/**/*.{ts,js,py,go,rb,cs,java}"
+  ]
+alwaysApply: false
+---
+
+# AI Tool Development Standards
+
+These standards apply to any code that defines tools or integrations for AI agents.
+
+## 1. Concepts and terminology
+
+- A **tool** is a callable capability that an AI agent can invoke.
+- Tools should:
+  - Have a clearly defined purpose.
+  - Be safe to call repeatedly, or explicitly documented if they are not idempotent.
+  - Be predictable and easy to simulate or mock in tests.
+
+## 2. Interface design
+
+- Each tool must define:
+  - A **name** that is unique, descriptive and stable.
+  - A **description** that explains what the tool does and when it should be used.
+  - A **schema** for input and output (for example JSON Schema or a typed interface).
+- Inputs:
+  - Use explicit fields with clear types.
+  - Prefer required fields where possible to avoid ambiguous calls.
+  - Validate inputs and return structured errors.
+- Outputs:
+  - Prefer structured outputs over plain text.
+  - Include a clear `status` or equivalent when appropriate.
+  - Provide enough detail for the agent to decide what to do next without leaking sensitive internals.
+
+## 3. Safety and guardrails
+
+- Tools must enforce safety constraints independently of the agent.
+- Validate and sanitise:
+  - User provided strings before using them in file paths, database queries or shell commands.
+  - URLs and external identifiers before use.
+- Limit side effects:
+  - Avoid destructive operations by default.
+  - When destructive operations are required, design a two step flow such as:
+    - `preview` effect tool
+    - explicit `apply` tool
+- Log significant actions, but never log secrets or sensitive personal data.
+
+## 4. Error handling
+
+- Do not throw raw errors to the agent when an alternative structured result is possible.
+- Return consistent error structures, for example:
+
+  - `code`: a short machine readable error code.
+  - `message`: a human readable explanation.
+  - `details`: optional structured context.
+
+- Differentiate between:
+  - **User errors** (invalid input, missing resource).
+  - **System errors** (network issues, timeouts).
+  - **Permission errors** (operation not allowed).
+
+Advise the agent, in the error message or metadata, whether retrying the call is likely to succeed.
+
+## 5. Idempotency and side effects
+
+- Prefer idempotent operations where feasible.
+- For non idempotent operations:
+  - Document the behaviour clearly in the tool description.
+  - Provide an identifier so the operation can be retried safely without duplication, when appropriate.
+- External calls (APIs, databases, queues) should use timeouts and sensible retry strategies.
+
+## 6. Observability and monitoring
+
+- Tools should be traceable:
+  - Emit logs at key points with identifiers for correlation.
+  - Where available, integrate with tracing or metrics systems.
+- Avoid overwhelming logs. Focus on:
+  - Inputs at a high level (not full payloads for sensitive data).
+  - Outputs that signal failure or unusual conditions.
+
+## 7. Versioning and compatibility
+
+- When changing tool behaviour in a breaking way:
+  - Prefer introducing a new versioned tool name (for example `search_v2`).
+  - Keep the old version available while clients migrate.
+- Document:
+  - Tool versions.
+  - Deprecation plans and timelines.
+- Avoid renaming tools unless necessary. Renames should be treated as new tools with clear mapping.
+
+## 8. Testing and simulation
+
+- Provide unit tests that:
+  - Cover normal usage.
+  - Cover invalid inputs and error conditions.
+- Provide integration tests for tools that call external services.
+- Where possible, provide a **simulation mode** that:
+  - Returns realistic but synthetic data.
+  - Avoids performing real side effects.
+  - Is clearly labelled so agents or developers do not confuse it with production.
+
+## 9. Documentation for agents
+
+Each tool must have documentation suitable for both humans and AI agents.
+
+- Human facing docs:
+  - Overview of what the tool does.
+  - Examples of calls and responses.
+  - Limitations and rate limits.
+- Agent facing docs (short and precise):
+  - When to use the tool.
+  - Required and optional fields.
+  - What the tool will not do.
+
+Keep the agent description under a few sentences so it fits comfortably in prompts.
+
+## 10. Security and permissions
+
+- Restrict what each tool is allowed to do.
+- Do not expose raw database or system level operations directly to agents.
+- Encapsulate sensitive operations behind specific tools that enforce project permission rules.
+- If the tool handles authentication:
+  - Use secure storage for tokens and keys.
+  - Avoid exposing tokens in tool outputs.
+
+## 11. Performance, quotas and rate limits
+
+- Tools should respect external API limits and quotas.
+- Implement:
+  - Caching where beneficial and safe.
+  - Backoff strategies for rate limit responses.
+- Keep response sizes reasonable:
+  - Paginate large result sets.
+  - Provide filters and search parameters instead of returning everything.
+
+## 12. AI coding agent guidance
+
+When acting as an AI coding agent developing or modifying tools:
+
+- Prefer reusing existing tools before adding new ones.
+- When defining a new tool:
+  - Provide a clear name, description and schema.
+  - Think about how the agent will decide to call it.
+- Make small, self contained changes:
+  - Add tests when behaviour is added or changed.
+  - Update relevant docs and examples.
+- Communicate assumptions and limitations in tool descriptions so agents do not misuse them.
