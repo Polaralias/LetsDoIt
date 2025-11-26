@@ -1,6 +1,5 @@
 package com.example.letsdoit.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -27,15 +27,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.letsdoit.data.ListEntity
+import com.example.letsdoit.data.TaskEntity
 
 @Composable
-fun ListsScreen(onListSelected: (Long) -> Unit, viewModel: ListsViewModel = hiltViewModel()) {
+fun TasksScreen(viewModel: TasksViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "Lists") })
+            CenterAlignedTopAppBar(title = { Text(text = uiState.list?.name ?: "Tasks") })
         }
     ) { paddingValues ->
         Column(
@@ -47,28 +47,34 @@ fun ListsScreen(onListSelected: (Long) -> Unit, viewModel: ListsViewModel = hilt
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = uiState.newListName,
-                    onValueChange = viewModel::onNewListNameChange,
-                    label = { Text(text = "New list name") },
+                    value = uiState.newTaskTitle,
+                    onValueChange = viewModel::onNewTaskTitleChange,
+                    label = { Text(text = "Task title") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                OutlinedTextField(
+                    value = uiState.newTaskNotes,
+                    onValueChange = viewModel::onNewTaskNotesChange,
+                    label = { Text(text = "Notes (optional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Button(
-                    onClick = viewModel::createList,
-                    enabled = uiState.newListName.isNotBlank(),
+                    onClick = viewModel::addTask,
+                    enabled = uiState.newTaskTitle.isNotBlank(),
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text(text = "Add List")
+                    Text(text = "Add Task")
                 }
             }
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
-                items(uiState.lists, key = { it.id }) { list ->
-                    ListItem(
-                        list = list,
-                        onClick = { onListSelected(list.id) },
-                        onRename = viewModel::renameList,
-                        onDelete = viewModel::deleteList
+                items(uiState.tasks, key = { it.id }) { task ->
+                    TaskItem(
+                        task = task,
+                        onToggleCompletion = { viewModel.toggleCompletion(task.id) },
+                        onUpdate = { title, notes -> viewModel.updateTask(task, title, notes) },
+                        onDelete = { viewModel.deleteTask(task.id) }
                     )
                 }
             }
@@ -77,42 +83,43 @@ fun ListsScreen(onListSelected: (Long) -> Unit, viewModel: ListsViewModel = hilt
 }
 
 @Composable
-private fun ListItem(
-    list: ListEntity,
-    onClick: () -> Unit,
-    onRename: (Long, String) -> Unit,
-    onDelete: (Long) -> Unit
+private fun TaskItem(
+    task: TaskEntity,
+    onToggleCompletion: () -> Unit,
+    onUpdate: (String, String) -> Unit,
+    onDelete: () -> Unit
 ) {
-    var name by rememberSaveable(list.id) { mutableStateOf(list.name) }
+    var title by rememberSaveable(task.id) { mutableStateOf(task.title) }
+    var notes by rememberSaveable(task.id, task.notes) { mutableStateOf(task.notes.orEmpty()) }
 
-    LaunchedEffect(list.id, list.name) {
-        name = list.name
+    LaunchedEffect(task.id, task.title, task.notes) {
+        title = task.title
+        notes = task.notes.orEmpty()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = list.name,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-        )
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Checkbox(checked = task.isCompleted, onCheckedChange = { onToggleCompletion() })
+            Text(text = title)
+        }
         OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text(text = "Rename list") },
+            value = title,
+            onValueChange = { title = it },
+            label = { Text(text = "Title") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        OutlinedTextField(
+            value = notes,
+            onValueChange = { notes = it },
+            label = { Text(text = "Notes") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = { onRename(list.id, name) }) {
+            Button(onClick = { onUpdate(title, notes) }) {
                 Text(text = "Save")
             }
-            TextButton(onClick = { onDelete(list.id) }) {
+            TextButton(onClick = onDelete) {
                 Text(text = "Delete")
             }
             Spacer(modifier = Modifier.weight(1f))
