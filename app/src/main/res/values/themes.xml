@@ -1,6 +1,5 @@
 <resources>
-    <style name="Theme.LetsDoIt" parent="Theme.Material3.DayNight">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+    <style name="Theme.LetsDoIt" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand color customizations can go here -->
     </style>
 </resources>
