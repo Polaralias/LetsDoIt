@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.letsdoit.app.presentation.home.HomeScreen
+import com.letsdoit.app.presentation.taskdetails.TaskDetailScreen
 import com.letsdoit.app.presentation.navigation.Screen
 import com.letsdoit.app.presentation.theme.LetsDoItTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,12 +33,19 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.Home.route) {
                             HomeScreen(
                                 onAddTaskClick = {
-                                    navController.navigate(Screen.TaskDetails.route)
+                                    navController.navigate(Screen.TaskDetails.createRoute("new"))
+                                },
+                                onTaskClick = { taskId ->
+                                    navController.navigate(Screen.TaskDetails.createRoute(taskId))
                                 }
                             )
                         }
                         composable(Screen.TaskDetails.route) {
-                           Text("Task Details Placeholder")
+                            TaskDetailScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                }
+                            )
                         }
                         composable(Screen.Settings.route) {
                             Text("Settings Placeholder")
