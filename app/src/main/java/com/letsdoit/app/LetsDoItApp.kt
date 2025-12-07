@@ -3,6 +3,7 @@ package com.letsdoit.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.letsdoit.app.core.notification.NotificationHelper
 import com.letsdoit.app.data.worker.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -18,6 +19,7 @@ class LetsDoItApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        NotificationHelper.createNotificationChannel(this)
         syncScheduler.schedulePeriodicSync()
     }
 
