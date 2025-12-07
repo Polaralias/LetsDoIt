@@ -6,4 +6,5 @@ sealed class Screen(val route: String) {
         fun createRoute(taskId: String) = "task_details/$taskId"
     }
     object Settings : Screen("settings")
+    object Kanban : Screen("kanban")
 }
