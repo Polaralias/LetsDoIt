@@ -46,10 +46,12 @@ Before producing work, the agent should fully understand the referenced skill do
     *   ClickUp API integration (`ClickUpApi`) with endpoints for Tasks, Lists, Folders, and Spaces.
     *   DTOs: `ClickUpTaskDto`, `ClickUpListDto`, `ClickUpFolderDto`, `ClickUpSpaceDto`.
     *   Retrofit setup and Auth Interceptor.
+    *   Testing: `ClickUpApiTest` verifies DTO parsing.
 *   **Domain Layer**:
     *   Domain Models: `Task`, `TaskQueue`, `Project`.
     *   Repository Interfaces: `TaskRepository`.
     *   Use Cases: Task management (Get, Create, Update, Toggle).
+    *   Testing: Unit tests for Use Cases (`CreateTaskUseCaseTest`, `GetTasksUseCaseTest`).
 *   **Presentation Layer**:
     *   Task Management UI (Home/List Screen, Detail Screen).
     *   ViewModels (`HomeViewModel`, `TaskDetailViewModel`).
