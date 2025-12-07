@@ -27,3 +27,27 @@ Before producing work, the agent should fully understand the referenced skill do
 - **`mcp-builder`** – Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).
 - **`skill-creator`** – Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.
 - **`template-skill`** – Replace with description of the skill and when Claude should use it.
+
+## Project Status
+
+**Current Phase:** Phase 1 (In Progress)
+
+### Completed
+*   **Project Setup**:
+    *   Gradle configuration (Kotlin, Hilt, Room, Compose).
+    *   Basic package structure (`core`, `data`, `presentation`).
+*   **Local Data Layer**:
+    *   Room Database (`AppDatabase`) setup.
+    *   Entities: `SpaceEntity`, `FolderEntity`, `ListEntity`, `TaskEntity`.
+    *   DAOs: `SpaceDao`, `FolderDao`, `ListDao`, `TaskDao`.
+    *   DI: `DatabaseModule` providing Database and DAOs.
+    *   Testing: `TaskDaoTest` verifies database operations and relationships.
+
+### Missing / Pending (Phase 1)
+*   **Network Layer**: `data/remote` package, ClickUp API integration, Retrofit setup.
+*   **Domain Layer**: `domain` package, Use Cases, Repositories, Models.
+*   **Presentation Layer**: ViewModels, Feature Screens (Task List, Task Details, etc.). Only basic navigation structure exists.
+*   **Core Features**: NLP Engine, Notifications, Background Sync, Calendar Integration.
+
+### Pending (Phase 2)
+*   **Expansion**: Kanban board, Recurring tasks, Advanced NLP.
