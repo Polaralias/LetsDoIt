@@ -24,8 +24,6 @@ class CreateTaskUseCaseTest {
             status = "open",
             dueDate = null,
             priority = 1,
-            createdAt = 0,
-            updatedAt = 0,
             isSynced = false
         )
 
@@ -47,8 +45,6 @@ class CreateTaskUseCaseTest {
             status = "open",
             dueDate = null,
             priority = 1,
-            createdAt = 0,
-            updatedAt = 0,
             isSynced = false
         )
 
