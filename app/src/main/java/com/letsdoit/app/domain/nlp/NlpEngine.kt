@@ -29,10 +29,16 @@ object NlpEngine {
     // "at 5pm", "at 17:00"
     private val AT_TIME_PATTERN = Pattern.compile("\\bat\\s+(\\d{1,2})(:(\\d{2}))?\\s*(am|pm)?\\b", Pattern.CASE_INSENSITIVE)
 
+    // Recurrence
+    private val DAILY_PATTERN = Pattern.compile("\\b(daily|every day)\\b", Pattern.CASE_INSENSITIVE)
+    private val WEEKLY_PATTERN = Pattern.compile("\\b(weekly|every week)\\b", Pattern.CASE_INSENSITIVE)
+    private val EVERY_DAY_PATTERN = Pattern.compile("\\bevery\\s+(monday|mon|tuesday|tue|wednesday|wed|thursday|thu|friday|fri|saturday|sat|sunday|sun)\\b", Pattern.CASE_INSENSITIVE)
+
     fun parse(input: String, now: LocalDateTime = LocalDateTime.now()): NlpResult {
         var cleanTitle = input
         var detectedDate: LocalDateTime? = null
         var detectedPriority: Int? = null
+        var recurrenceRule: String? = null
 
         // 1. Detect Priority
         val priorityMatcher = PRIORITY_PATTERN.matcher(cleanTitle)
@@ -48,6 +54,30 @@ object NlpEngine {
             if (detectedPriority != null) {
                 cleanTitle = cleanTitle.replace(priorityMatcher.group(0), "").trim()
             }
+        }
+
+        // 1.5 Detect Recurrence
+        val dailyMatcher = DAILY_PATTERN.matcher(cleanTitle)
+        if (dailyMatcher.find()) {
+            recurrenceRule = "FREQ=DAILY"
+            cleanTitle = cleanTitle.replace(dailyMatcher.group(0), "").trim()
+        } else {
+             val weeklyMatcher = WEEKLY_PATTERN.matcher(cleanTitle)
+             if (weeklyMatcher.find()) {
+                 recurrenceRule = "FREQ=WEEKLY"
+                 cleanTitle = cleanTitle.replace(weeklyMatcher.group(0), "").trim()
+             } else {
+                val everyDayMatcher = EVERY_DAY_PATTERN.matcher(cleanTitle)
+                if (everyDayMatcher.find()) {
+                    val dayStr = everyDayMatcher.group(1)!!.lowercase()
+                    val dayOfWeek = getDayOfWeek(dayStr)
+                    if (dayOfWeek != null) {
+                        val rruleDay = dayOfWeek.name.take(2)
+                        recurrenceRule = "FREQ=WEEKLY;BYDAY=$rruleDay"
+                        cleanTitle = cleanTitle.replace(everyDayMatcher.group(0), "").trim()
+                    }
+                }
+             }
         }
 
         // 2. Detect Relative Date (Today, Tomorrow, Yesterday)
@@ -149,7 +179,7 @@ object NlpEngine {
         // Cleanup extra spaces
         cleanTitle = cleanTitle.replace("\\s+".toRegex(), " ").trim()
 
-        return NlpResult(cleanTitle, detectedDate, detectedPriority)
+        return NlpResult(cleanTitle, detectedDate, detectedPriority, recurrenceRule)
     }
 
     private fun getDayOfWeek(input: String): DayOfWeek? {
