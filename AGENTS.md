@@ -42,12 +42,22 @@ Before producing work, the agent should fully understand the referenced skill do
     *   DAOs: `SpaceDao`, `FolderDao`, `ListDao`, `TaskDao`.
     *   DI: `DatabaseModule` providing Database and DAOs.
     *   Testing: `TaskDaoTest` verifies database operations and relationships.
+*   **Network Layer**:
+    *   ClickUp API integration (`ClickUpApi`) with endpoints for Tasks, Lists, Folders, and Spaces.
+    *   DTOs: `ClickUpTaskDto`, `ClickUpListDto`, `ClickUpFolderDto`, `ClickUpSpaceDto`.
+    *   Retrofit setup and Auth Interceptor.
+*   **Domain Layer**:
+    *   Domain Models: `Task`, `TaskQueue`, `Project`.
+    *   Repository Interfaces: `TaskRepository`.
+    *   Use Cases: Task management (Get, Create, Update, Toggle).
+*   **Presentation Layer**:
+    *   Task Management UI (Home/List Screen, Detail Screen).
+    *   ViewModels (`HomeViewModel`, `TaskDetailViewModel`).
+*   **Core Features**:
+    *   **Background Sync**: WorkManager setup with `SyncWorker` and `SyncScheduler`.
 
 ### Missing / Pending (Phase 1)
-*   **Network Layer**: `data/remote` package, ClickUp API integration, Retrofit setup.
-*   **Domain Layer**: `domain` package, Use Cases, Repositories, Models.
-*   **Presentation Layer**: ViewModels, Feature Screens (Task List, Task Details, etc.). Only basic navigation structure exists.
-*   **Core Features**: NLP Engine, Notifications, Background Sync, Calendar Integration.
+*   **Core Features**: NLP Engine, Notifications, Calendar Integration.
 
 ### Pending (Phase 2)
 *   **Expansion**: Kanban board, Recurring tasks, Advanced NLP.

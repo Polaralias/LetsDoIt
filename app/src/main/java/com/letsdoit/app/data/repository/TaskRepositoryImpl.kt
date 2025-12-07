@@ -31,7 +31,8 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun createTask(task: Task) {
         // Save locally first
-        taskDao.insertTask(task.toEntity().copy(isSynced = false))
+        val localEntity = task.toEntity().copy(isSynced = false)
+        taskDao.insertTask(localEntity)
 
         try {
             val request = ClickUpCreateTaskRequest(
@@ -42,6 +43,8 @@ class TaskRepositoryImpl @Inject constructor(
                 dueDate = task.dueDate?.toEpochMilli()
             )
             val dto = api.createTask(task.listId, request)
+            // Remove local temp task and insert real one
+            taskDao.deleteTask(localEntity)
             taskDao.insertTask(dto.toEntity(task.listId))
         } catch (e: Exception) {
             e.printStackTrace()
@@ -74,6 +77,41 @@ class TaskRepositoryImpl @Inject constructor(
             entities.forEach { taskDao.insertTask(it) }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    override suspend fun syncUnsyncedTasks() {
+        val unsynced = taskDao.getUnsyncedTasks()
+        for (entity in unsynced) {
+            try {
+                // Heuristic: ClickUp IDs are short, UUIDs are long
+                if (entity.id.length > 20) {
+                    // Create
+                    val request = ClickUpCreateTaskRequest(
+                        name = entity.title,
+                        description = entity.description,
+                        status = entity.status,
+                        priority = entity.priority,
+                        dueDate = entity.dueDate
+                    )
+                    val dto = api.createTask(entity.listId, request)
+                    taskDao.deleteTask(entity)
+                    taskDao.insertTask(dto.toEntity(entity.listId))
+                } else {
+                    // Update
+                    val request = ClickUpUpdateTaskRequest(
+                        name = entity.title,
+                        description = entity.description,
+                        status = entity.status,
+                        priority = entity.priority,
+                        dueDate = entity.dueDate
+                    )
+                    val dto = api.updateTask(entity.id, request)
+                    taskDao.insertTask(dto.toEntity(entity.listId))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }

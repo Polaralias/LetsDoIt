@@ -9,4 +9,5 @@ interface TaskRepository {
     suspend fun createTask(task: Task)
     suspend fun updateTask(task: Task)
     suspend fun refreshTasks(listId: String)
+    suspend fun syncUnsyncedTasks()
 }
