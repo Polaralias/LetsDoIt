@@ -26,6 +26,12 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE tasks ADD COLUMN recurrenceRule TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -36,7 +42,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "lets_do_it_db"
         )
-        .addMigrations(MIGRATION_1_2)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
         .build()
     }
 

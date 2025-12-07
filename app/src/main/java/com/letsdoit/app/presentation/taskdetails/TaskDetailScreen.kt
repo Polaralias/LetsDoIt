@@ -1,15 +1,13 @@
 package com.letsdoit.app.presentation.taskdetails
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -83,9 +81,48 @@ fun TaskDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        var recurrenceExpanded by remember { mutableStateOf(false) }
+                        Box {
+                             OutlinedTextField(
+                                 value = getRecurrenceLabel(task.recurrenceRule),
+                                 onValueChange = {},
+                                 readOnly = true,
+                                 label = { Text("Repeat") },
+                                 trailingIcon = {
+                                     IconButton(onClick = { recurrenceExpanded = true }) {
+                                         Icon(Icons.Default.ArrowDropDown, "Select")
+                                     }
+                                 },
+                                 modifier = Modifier.fillMaxWidth().clickable { recurrenceExpanded = true }
+                             )
+                             DropdownMenu(expanded = recurrenceExpanded, onDismissRequest = { recurrenceExpanded = false }) {
+                                 DropdownMenuItem(text = { Text("None") }, onClick = { viewModel.onRecurrenceChange(null); recurrenceExpanded = false })
+                                 DropdownMenuItem(text = { Text("Daily") }, onClick = { viewModel.onRecurrenceChange("FREQ=DAILY"); recurrenceExpanded = false })
+                                 DropdownMenuItem(text = { Text("Weekly") }, onClick = { viewModel.onRecurrenceChange("FREQ=WEEKLY"); recurrenceExpanded = false })
+                             }
+                        }
+
+                        if (state.suggestedDueDate != null || state.suggestedPriority != null || state.suggestedRecurrence != null) {
+                             Spacer(modifier = Modifier.height(8.dp))
+                             SuggestionChip(
+                                 onClick = { viewModel.applySuggestion() },
+                                 label = { Text("Apply NLP Suggestions") }
+                             )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+fun getRecurrenceLabel(rule: String?): String {
+    return when(rule) {
+        null -> "None"
+        "FREQ=DAILY" -> "Daily"
+        "FREQ=WEEKLY" -> "Weekly"
+        else -> "Custom"
     }
 }

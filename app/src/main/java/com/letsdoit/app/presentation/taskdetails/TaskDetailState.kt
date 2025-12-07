@@ -10,5 +10,6 @@ data class TaskDetailState(
     val saveError: String? = null,
     val isSaved: Boolean = false,
     val suggestedDueDate: LocalDateTime? = null,
-    val suggestedPriority: Int? = null
+    val suggestedPriority: Int? = null,
+    val suggestedRecurrence: String? = null
 )

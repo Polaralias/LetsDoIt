@@ -26,5 +26,6 @@ data class TaskEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val isSynced: Boolean = true,
-    val calendarEventId: Long? = null
+    val calendarEventId: Long? = null,
+    val recurrenceRule: String? = null
 )

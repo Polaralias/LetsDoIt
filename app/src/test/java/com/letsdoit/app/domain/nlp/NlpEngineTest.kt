@@ -94,4 +94,36 @@ class NlpEngineTest {
         val expected = LocalDateTime.of(2024, Month.JANUARY, 8, 10, 0)
         assertEquals(expected, result.detectedDate)
     }
+
+    @Test
+    fun `parse daily`() {
+        val input = "Walk dog daily"
+        val result = NlpEngine.parse(input, now)
+        assertEquals("Walk dog", result.cleanTitle)
+        assertEquals("FREQ=DAILY", result.recurrenceRule)
+    }
+
+    @Test
+    fun `parse every day`() {
+        val input = "Walk dog every day"
+        val result = NlpEngine.parse(input, now)
+        assertEquals("Walk dog", result.cleanTitle)
+        assertEquals("FREQ=DAILY", result.recurrenceRule)
+    }
+
+    @Test
+    fun `parse weekly`() {
+        val input = "Report weekly"
+        val result = NlpEngine.parse(input, now)
+        assertEquals("Report", result.cleanTitle)
+        assertEquals("FREQ=WEEKLY", result.recurrenceRule)
+    }
+
+    @Test
+    fun `parse every Monday`() {
+        val input = "Meeting every Monday"
+        val result = NlpEngine.parse(input, now)
+        assertEquals("Meeting", result.cleanTitle)
+        assertEquals("FREQ=WEEKLY;BYDAY=MO", result.recurrenceRule)
+    }
 }
