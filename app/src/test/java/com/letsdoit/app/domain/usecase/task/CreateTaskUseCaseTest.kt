@@ -1,5 +1,6 @@
 package com.letsdoit.app.domain.usecase.task
 
+import com.letsdoit.app.domain.alarm.AlarmScheduler
 import com.letsdoit.app.domain.model.Task
 import com.letsdoit.app.domain.repository.TaskRepository
 import io.mockk.coEvery
@@ -12,7 +13,8 @@ import org.junit.Test
 class CreateTaskUseCaseTest {
 
     private val repository = mockk<TaskRepository>(relaxed = true)
-    private val createTaskUseCase = CreateTaskUseCase(repository)
+    private val alarmScheduler = mockk<AlarmScheduler>(relaxed = true)
+    private val createTaskUseCase = CreateTaskUseCase(repository, alarmScheduler)
 
     @Test
     fun `invoke throws exception when title is blank`() = runTest {
@@ -51,5 +53,6 @@ class CreateTaskUseCaseTest {
         createTaskUseCase(task)
 
         coVerify { repository.createTask(task) }
+        coVerify { alarmScheduler.scheduleAlarm(task) }
     }
 }
