@@ -2,6 +2,8 @@ package com.letsdoit.app.domain.usecase.task
 
 import com.letsdoit.app.domain.alarm.AlarmScheduler
 import com.letsdoit.app.domain.model.Task
+import com.letsdoit.app.domain.repository.CalendarRepository
+import com.letsdoit.app.domain.repository.PreferencesRepository
 import com.letsdoit.app.domain.repository.TaskRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -14,7 +16,9 @@ class CreateTaskUseCaseTest {
 
     private val repository = mockk<TaskRepository>(relaxed = true)
     private val alarmScheduler = mockk<AlarmScheduler>(relaxed = true)
-    private val createTaskUseCase = CreateTaskUseCase(repository, alarmScheduler)
+    private val calendarRepository = mockk<CalendarRepository>(relaxed = true)
+    private val preferencesRepository = mockk<PreferencesRepository>(relaxed = true)
+    private val createTaskUseCase = CreateTaskUseCase(repository, alarmScheduler, calendarRepository, preferencesRepository)
 
     @Test
     fun `invoke throws exception when title is blank`() = runTest {

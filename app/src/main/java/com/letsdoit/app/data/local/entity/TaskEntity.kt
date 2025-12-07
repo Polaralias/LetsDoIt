@@ -25,5 +25,6 @@ data class TaskEntity(
     val priority: Int,
     val createdAt: Long,
     val updatedAt: Long,
-    val isSynced: Boolean = true
+    val isSynced: Boolean = true,
+    val calendarEventId: Long? = null
 )

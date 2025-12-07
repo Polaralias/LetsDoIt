@@ -2,6 +2,8 @@ package com.letsdoit.app.domain.usecase.task
 
 import com.letsdoit.app.domain.alarm.AlarmScheduler
 import com.letsdoit.app.domain.model.Task
+import com.letsdoit.app.domain.repository.CalendarRepository
+import com.letsdoit.app.domain.repository.PreferencesRepository
 import com.letsdoit.app.domain.repository.TaskRepository
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -13,7 +15,9 @@ class UpdateTaskUseCaseTest {
 
     private val repository = mockk<TaskRepository>(relaxed = true)
     private val alarmScheduler = mockk<AlarmScheduler>(relaxed = true)
-    private val updateTaskUseCase = UpdateTaskUseCase(repository, alarmScheduler)
+    private val calendarRepository = mockk<CalendarRepository>(relaxed = true)
+    private val preferencesRepository = mockk<PreferencesRepository>(relaxed = true)
+    private val updateTaskUseCase = UpdateTaskUseCase(repository, alarmScheduler, calendarRepository, preferencesRepository)
 
     @Test
     fun `invoke calls repository and schedules alarm when due date is present and status is Open`() = runTest {
