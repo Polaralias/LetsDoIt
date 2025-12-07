@@ -24,7 +24,8 @@ fun TaskEntity.toDomain(): Task {
         status = status,
         dueDate = dueDate?.toLocalDateTime(),
         priority = priority,
-        isSynced = isSynced
+        isSynced = isSynced,
+        calendarEventId = calendarEventId
     )
 }
 
@@ -39,7 +40,8 @@ fun Task.toEntity(): TaskEntity {
         priority = priority,
         createdAt = System.currentTimeMillis(),
         updatedAt = System.currentTimeMillis(),
-        isSynced = isSynced
+        isSynced = isSynced,
+        calendarEventId = calendarEventId
     )
 }
 

@@ -2,6 +2,8 @@ package com.letsdoit.app.core.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.letsdoit.app.data.local.AppDatabase
 import com.letsdoit.app.data.local.dao.FolderDao
 import com.letsdoit.app.data.local.dao.ListDao
@@ -18,6 +20,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE tasks ADD COLUMN calendarEventId INTEGER")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -27,7 +35,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "lets_do_it_db"
-        ).build()
+        )
+        .addMigrations(MIGRATION_1_2)
+        .build()
     }
 
     @Provides

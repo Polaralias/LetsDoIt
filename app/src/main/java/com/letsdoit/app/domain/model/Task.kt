@@ -10,5 +10,6 @@ data class Task(
     val status: String,
     val dueDate: LocalDateTime?,
     val priority: Int,
-    val isSynced: Boolean = true
+    val isSynced: Boolean = true,
+    val calendarEventId: Long? = null
 )

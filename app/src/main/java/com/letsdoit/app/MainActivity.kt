@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.letsdoit.app.presentation.home.HomeScreen
+import com.letsdoit.app.presentation.settings.SettingsScreen
 import com.letsdoit.app.presentation.taskdetails.TaskDetailScreen
 import com.letsdoit.app.presentation.navigation.Screen
 import com.letsdoit.app.presentation.theme.LetsDoItTheme
@@ -37,6 +38,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onTaskClick = { taskId ->
                                     navController.navigate(Screen.TaskDetails.createRoute(taskId))
+                                },
+                                onSettingsClick = {
+                                    navController.navigate(Screen.Settings.route)
                                 }
                             )
                         }
@@ -48,7 +52,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable(Screen.Settings.route) {
-                            Text("Settings Placeholder")
+                            SettingsScreen()
                         }
                     }
                 }
