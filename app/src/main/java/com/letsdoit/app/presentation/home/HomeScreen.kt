@@ -23,7 +23,8 @@ import com.letsdoit.app.presentation.components.TaskItem
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
-    onAddTaskClick: () -> Unit
+    onAddTaskClick: () -> Unit,
+    onTaskClick: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -48,7 +49,7 @@ fun HomeScreen(
                         TaskItem(
                             task = task,
                             onCheck = { viewModel.onTaskChecked(it) },
-                            onClick = { /* Navigate to details */ }
+                            onClick = { onTaskClick(task.id) }
                         )
                     }
                 }
