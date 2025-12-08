@@ -19,8 +19,13 @@ class TaskRepositoryImpl @Inject constructor(
     private val api: ClickUpApi
 ) : TaskRepository {
 
-    override fun getTasksFlow(): Flow<List<Task>> {
-        return taskDao.getAllTasks().map { entities ->
+    override fun getTasksFlow(listId: String?): Flow<List<Task>> {
+        val flow = if (listId != null) {
+            taskDao.getTasksByListId(listId)
+        } else {
+            taskDao.getAllTasks()
+        }
+        return flow.map { entities ->
             entities.map { it.toDomain() }
         }
     }

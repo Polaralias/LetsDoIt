@@ -3,11 +3,13 @@ package com.letsdoit.app.presentation.taskdetails
 import androidx.lifecycle.SavedStateHandle
 import com.letsdoit.app.core.util.Constants
 import com.letsdoit.app.domain.model.Task
+import com.letsdoit.app.domain.usecase.project.GetSelectedProjectUseCase
 import com.letsdoit.app.domain.usecase.task.CreateTaskUseCase
 import com.letsdoit.app.domain.usecase.task.GetTaskUseCase
 import com.letsdoit.app.domain.usecase.task.UpdateTaskUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +31,7 @@ class TaskDetailViewModelTest {
     private val getTaskUseCase: GetTaskUseCase = mockk()
     private val createTaskUseCase: CreateTaskUseCase = mockk(relaxed = true)
     private val updateTaskUseCase: UpdateTaskUseCase = mockk(relaxed = true)
+    private val getSelectedProjectUseCase: GetSelectedProjectUseCase = mockk()
     private lateinit var viewModel: TaskDetailViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -45,8 +48,9 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `when taskId is new, init creates empty task`() = runTest {
+        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
 
         val state = viewModel.uiState.value
         assertNotNull(state.task)
@@ -68,9 +72,10 @@ class TaskDetailViewModelTest {
             priority = 1
         )
         coEvery { getTaskUseCase(taskId) } returns task
+        every { getSelectedProjectUseCase.getSync() } returns "list1"
 
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to taskId))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -81,8 +86,9 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `onTitleChange updates task title`() = runTest {
+        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
 
         viewModel.onTitleChange("New Title")
 
@@ -91,8 +97,9 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `saveTask calls create when new`() = runTest {
+        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
 
         viewModel.onTitleChange("Task to Save")
         viewModel.saveTask()
@@ -105,8 +112,9 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `saveTask sets saveError when fails`() = runTest {
+        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
 
         coEvery { createTaskUseCase(any()) } throws RuntimeException("Error")
 

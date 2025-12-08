@@ -22,12 +22,12 @@ class GetTasksUseCaseTest {
             Task("1", "list1", "Title 1", null, "open", null, 1, true),
             Task("2", "list1", "Title 2", null, "open", null, 1, true)
         )
-        every { repository.getTasksFlow() } returns flowOf(tasks)
+        every { repository.getTasksFlow(null) } returns flowOf(tasks)
 
         val result = getTasksUseCase().toList()
 
         assertEquals(1, result.size)
         assertEquals(tasks, result[0])
-        verify { repository.getTasksFlow() }
+        verify { repository.getTasksFlow(null) }
     }
 }

@@ -45,9 +45,9 @@ Before producing work, the agent should fully understand the referenced skill do
     *   **Calendar Integration**: 2-way sync with Android Calendar.
     *   **Kanban Board**: Drag-and-drop workflow visualization.
     *   **Recurring Tasks**: Logic for repeating tasks upon completion.
+    *   **List Management**: List selection UI and multi-list support.
 
 ### Pending / Next Steps
-*   **List Management**: UI to select/create different lists (currently using hardcoded `DEMO_LIST_ID`).
 *   **Phase 3 (Advanced)**:
     *   **Dynamic Theming**: Custom color palettes.
     *   **AI Suggestions**: Suggest tasks based on history.
