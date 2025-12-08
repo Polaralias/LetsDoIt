@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.letsdoit.app.presentation.home.HomeScreen
 import com.letsdoit.app.presentation.kanban.KanbanScreen
+import com.letsdoit.app.presentation.project.ProjectListScreen
 import com.letsdoit.app.presentation.settings.SettingsScreen
 import com.letsdoit.app.presentation.taskdetails.TaskDetailScreen
 import com.letsdoit.app.presentation.navigation.Screen
@@ -45,6 +46,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onKanbanClick = {
                                     navController.navigate(Screen.Kanban.route)
+                                },
+                                onProjectListClick = {
+                                    navController.navigate(Screen.ProjectList.route)
                                 }
                             )
                         }
@@ -60,6 +64,13 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Settings.route) {
                             SettingsScreen()
+                        }
+                        composable(Screen.ProjectList.route) {
+                            ProjectListScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                }
+                            )
                         }
                     }
                 }

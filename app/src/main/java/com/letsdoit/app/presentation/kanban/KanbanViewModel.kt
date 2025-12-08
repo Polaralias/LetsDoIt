@@ -3,9 +3,11 @@ package com.letsdoit.app.presentation.kanban
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.letsdoit.app.domain.model.Task
+import com.letsdoit.app.domain.usecase.project.GetSelectedProjectUseCase
 import com.letsdoit.app.domain.usecase.task.GetTasksUseCase
 import com.letsdoit.app.domain.usecase.task.UpdateTaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,19 +20,32 @@ import javax.inject.Inject
 @HiltViewModel
 class KanbanViewModel @Inject constructor(
     private val getTasksUseCase: GetTasksUseCase,
-    private val updateTaskUseCase: UpdateTaskUseCase
+    private val updateTaskUseCase: UpdateTaskUseCase,
+    private val getSelectedProjectUseCase: GetSelectedProjectUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(KanbanState())
     val uiState: StateFlow<KanbanState> = _uiState.asStateFlow()
 
+    private var tasksJob: Job? = null
+
     init {
-        loadTasks()
+        observeSelectedProject()
     }
 
-    private fun loadTasks() {
+    private fun observeSelectedProject() {
+        getSelectedProjectUseCase()
+            .onEach { listId ->
+                loadTasks(listId)
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun loadTasks(listId: String?) {
+        tasksJob?.cancel()
         _uiState.value = _uiState.value.copy(isLoading = true)
-        getTasksUseCase()
+
+        tasksJob = getTasksUseCase(listId)
             .onEach { tasks ->
                 val columns = groupTasks(tasks)
                 _uiState.value = _uiState.value.copy(

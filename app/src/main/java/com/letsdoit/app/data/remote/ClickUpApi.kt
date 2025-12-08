@@ -9,6 +9,7 @@ import com.letsdoit.app.data.remote.dto.ClickUpSpaceDto
 import com.letsdoit.app.data.remote.dto.ClickUpSpacesResponse
 import com.letsdoit.app.data.remote.dto.ClickUpTaskDto
 import com.letsdoit.app.data.remote.dto.ClickUpTasksResponse
+import com.letsdoit.app.data.remote.dto.ClickUpTeamsResponse
 import com.letsdoit.app.data.remote.dto.ClickUpUpdateTaskRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -17,6 +18,9 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ClickUpApi {
+
+    @GET("team")
+    suspend fun getTeams(): ClickUpTeamsResponse
 
     @GET("task/{task_id}")
     suspend fun getTask(@Path("task_id") taskId: String): ClickUpTaskDto

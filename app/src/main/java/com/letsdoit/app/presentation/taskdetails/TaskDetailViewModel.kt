@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.letsdoit.app.core.util.Constants
 import com.letsdoit.app.domain.model.Task
 import com.letsdoit.app.domain.nlp.NlpEngine
+import com.letsdoit.app.domain.usecase.project.GetSelectedProjectUseCase
 import com.letsdoit.app.domain.usecase.task.CreateTaskUseCase
 import com.letsdoit.app.domain.usecase.task.GetTaskUseCase
 import com.letsdoit.app.domain.usecase.task.UpdateTaskUseCase
@@ -24,6 +25,7 @@ class TaskDetailViewModel @Inject constructor(
     private val getTaskUseCase: GetTaskUseCase,
     private val createTaskUseCase: CreateTaskUseCase,
     private val updateTaskUseCase: UpdateTaskUseCase,
+    private val getSelectedProjectUseCase: GetSelectedProjectUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -38,11 +40,12 @@ class TaskDetailViewModel @Inject constructor(
         if (taskId != null && taskId != "new") {
             loadTask(taskId)
         } else {
+            val listId = getSelectedProjectUseCase.getSync() ?: Constants.DEMO_LIST_ID
             // Initialize with a new empty task
             _uiState.value = _uiState.value.copy(
                 task = Task(
                     id = UUID.randomUUID().toString(),
-                    listId = Constants.DEMO_LIST_ID,
+                    listId = listId,
                     title = "",
                     description = "",
                     status = "Open",
