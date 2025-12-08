@@ -30,36 +30,24 @@ Before producing work, the agent should fully understand the referenced skill do
 
 ## Project Status
 
-**Current Phase:** Phase 1 (In Progress)
+**Current Phase:** Phase 3 (Advanced Features & Polish)
 
 ### Completed
-*   **Project Setup**:
-    *   Gradle configuration (Kotlin, Hilt, Room, Compose).
-    *   Basic package structure (`core`, `data`, `presentation`).
-*   **Local Data Layer**:
-    *   Room Database (`AppDatabase`) setup.
-    *   Entities: `SpaceEntity`, `FolderEntity`, `ListEntity`, `TaskEntity`.
-    *   DAOs: `SpaceDao`, `FolderDao`, `ListDao`, `TaskDao`.
-    *   DI: `DatabaseModule` providing Database and DAOs.
-    *   Testing: `TaskDaoTest` verifies database operations and relationships.
-*   **Network Layer**:
-    *   ClickUp API integration (`ClickUpApi`) with endpoints for Tasks, Lists, Folders, and Spaces.
-    *   DTOs: `ClickUpTaskDto`, `ClickUpListDto`, `ClickUpFolderDto`, `ClickUpSpaceDto`.
-    *   Retrofit setup and Auth Interceptor.
-    *   Testing: `ClickUpApiTest` verifies DTO parsing.
-*   **Domain Layer**:
-    *   Domain Models: `Task`, `TaskQueue`, `Project`.
-    *   Repository Interfaces: `TaskRepository`.
-    *   Use Cases: Task management (Get, Create, Update, Toggle).
-    *   Testing: Unit tests for Use Cases (`CreateTaskUseCaseTest`, `GetTasksUseCaseTest`).
-*   **Presentation Layer**:
-    *   Task Management UI (Home/List Screen, Detail Screen).
-    *   ViewModels (`HomeViewModel`, `TaskDetailViewModel`).
+*   **Project Setup**: Gradle, Basic Structure, Hilt, Room.
+*   **Local Data Layer**: Room DB, Entities, DAOs.
+*   **Network Layer**: ClickUp API Integration.
+*   **Domain Layer**: Clean Architecture, Use Cases.
+*   **Presentation Layer**: Home, Details, Settings, Kanban Screens.
 *   **Core Features**:
-    *   **Background Sync**: WorkManager setup with `SyncWorker` and `SyncScheduler`.
+    *   **Background Sync**: WorkManager.
+    *   **NLP Engine**: Date, Priority, and Recurrence parsing.
+    *   **Notifications**: AlarmManager integration for due dates.
+    *   **Calendar Integration**: 2-way sync with Android Calendar.
+    *   **Kanban Board**: Drag-and-drop workflow visualization.
+    *   **Recurring Tasks**: Logic for repeating tasks upon completion.
 
-### Missing / Pending (Phase 1)
-*   **Core Features**: NLP Engine, Notifications, Calendar Integration.
-
-### Pending (Phase 2)
-*   **Expansion**: Kanban board, Recurring tasks, Advanced NLP.
+### Pending / Next Steps
+*   **List Management**: UI to select/create different lists (currently using hardcoded `DEMO_LIST_ID`).
+*   **Phase 3 (Advanced)**:
+    *   **Dynamic Theming**: Custom color palettes.
+    *   **AI Suggestions**: Suggest tasks based on history.
