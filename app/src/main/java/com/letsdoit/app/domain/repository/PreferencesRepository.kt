@@ -11,4 +11,12 @@ interface PreferencesRepository {
     fun getSelectedListId(): String?
     fun setSelectedListId(listId: String)
     fun getSelectedListIdFlow(): Flow<String?>
+
+    fun getThemeMode(): com.letsdoit.app.domain.model.ThemeMode
+    fun setThemeMode(mode: com.letsdoit.app.domain.model.ThemeMode)
+    fun getThemeModeFlow(): Flow<com.letsdoit.app.domain.model.ThemeMode>
+
+    fun isDynamicColorEnabled(): Boolean
+    fun setDynamicColorEnabled(enabled: Boolean)
+    fun getDynamicColorEnabledFlow(): Flow<Boolean>
 }

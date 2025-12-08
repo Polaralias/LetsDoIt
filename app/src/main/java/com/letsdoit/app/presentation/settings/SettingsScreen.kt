@@ -35,13 +35,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.letsdoit.app.domain.model.ThemeMode
+import com.letsdoit.app.presentation.theme.ThemeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val themeState by themeViewModel.themeState.collectAsState()
     val context = LocalContext.current
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
@@ -69,6 +73,90 @@ fun SettingsScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Theme Mode Dropdown
+            var themeExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = themeExpanded,
+                onExpandedChange = { themeExpanded = !themeExpanded }
+            ) {
+                TextField(
+                    value = when (themeState.themeMode) {
+                        ThemeMode.SYSTEM -> "System Default"
+                        ThemeMode.LIGHT -> "Light"
+                        ThemeMode.DARK -> "Dark"
+                    },
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Theme Mode") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = themeExpanded,
+                    onDismissRequest = { themeExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("System Default") },
+                        onClick = {
+                            themeViewModel.setThemeMode(ThemeMode.SYSTEM)
+                            themeExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Light") },
+                        onClick = {
+                            themeViewModel.setThemeMode(ThemeMode.LIGHT)
+                            themeExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Dark") },
+                        onClick = {
+                            themeViewModel.setThemeMode(ThemeMode.DARK)
+                            themeExpanded = false
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dynamic Color Toggle
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Dynamic Color",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "Use wallpaper colors",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = themeState.isDynamicColorEnabled,
+                        onCheckedChange = { themeViewModel.setDynamicColorEnabled(it) }
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+
             Text(
                 text = "Integrations",
                 style = MaterialTheme.typography.titleMedium,
