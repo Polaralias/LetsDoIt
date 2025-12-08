@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.letsdoit.app.presentation.home.HomeScreen
+import com.letsdoit.app.presentation.kanban.KanbanScreen
 import com.letsdoit.app.presentation.settings.SettingsScreen
 import com.letsdoit.app.presentation.taskdetails.TaskDetailScreen
 import com.letsdoit.app.presentation.navigation.Screen
@@ -41,8 +42,14 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSettingsClick = {
                                     navController.navigate(Screen.Settings.route)
+                                },
+                                onKanbanClick = {
+                                    navController.navigate(Screen.Kanban.route)
                                 }
                             )
+                        }
+                        composable(Screen.Kanban.route) {
+                            KanbanScreen(navController = navController)
                         }
                         composable(Screen.TaskDetails.route) {
                             TaskDetailScreen(
