@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.ksp)
+    // Add google services plugin after adding google-services.json
+    // alias(libs.plugins.googleServices)
 }
 
 android {
@@ -62,6 +64,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
+
+    // Firebase
+    implementation(libs.firebase.messaging)
 
     // Hilt
     implementation(libs.hilt.android)
