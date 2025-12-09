@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
 
             LetsDoItTheme(
                 themeMode = themeState.themeMode,
+                themeColor = themeState.themeColor,
                 dynamicColor = themeState.isDynamicColorEnabled
             ) {
                 // A surface container using the 'background' color from the theme

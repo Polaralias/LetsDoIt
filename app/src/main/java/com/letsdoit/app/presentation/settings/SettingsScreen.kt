@@ -4,6 +4,11 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,11 +38,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.letsdoit.app.domain.model.ThemeColor
 import com.letsdoit.app.domain.model.ThemeMode
+import com.letsdoit.app.presentation.theme.Blue40
+import com.letsdoit.app.presentation.theme.Green40
+import com.letsdoit.app.presentation.theme.Orange40
+import com.letsdoit.app.presentation.theme.Purple40
 import com.letsdoit.app.presentation.theme.ThemeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -156,6 +169,28 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
+            // Color Theme Selector
+            if (!themeState.isDynamicColorEnabled || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                Text(
+                    text = "Color Theme",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    ThemeColor.values().forEach { color ->
+                        ColorOption(
+                            color = color,
+                            isSelected = themeState.themeColor == color,
+                            onClick = { themeViewModel.setThemeColor(color) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
 
             Text(
                 text = "Integrations",
@@ -267,4 +302,31 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+fun ColorOption(
+    color: ThemeColor,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = when (color) {
+        ThemeColor.PURPLE -> Purple40
+        ThemeColor.BLUE -> Blue40
+        ThemeColor.GREEN -> Green40
+        ThemeColor.ORANGE -> Orange40
+    }
+
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(backgroundColor)
+            .border(
+                width = if (isSelected) 3.dp else 0.dp,
+                color = MaterialTheme.colorScheme.onSurface,
+                shape = CircleShape
+            )
+            .clickable(onClick = onClick)
+    )
 }

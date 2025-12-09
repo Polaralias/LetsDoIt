@@ -2,6 +2,7 @@ package com.letsdoit.app.presentation.theme
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.letsdoit.app.domain.model.ThemeColor
 import com.letsdoit.app.domain.model.ThemeMode
 import com.letsdoit.app.domain.repository.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,7 @@ import javax.inject.Inject
 
 data class ThemeState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val themeColor: ThemeColor = ThemeColor.PURPLE,
     val isDynamicColorEnabled: Boolean = true
 )
 
@@ -24,10 +26,12 @@ class ThemeViewModel @Inject constructor(
 
     val themeState: StateFlow<ThemeState> = combine(
         preferencesRepository.getThemeModeFlow(),
+        preferencesRepository.getThemeColorFlow(),
         preferencesRepository.getDynamicColorEnabledFlow()
-    ) { themeMode, dynamicColor ->
+    ) { themeMode, themeColor, dynamicColor ->
         ThemeState(
             themeMode = themeMode,
+            themeColor = themeColor,
             isDynamicColorEnabled = dynamicColor
         )
     }.stateIn(
@@ -35,6 +39,7 @@ class ThemeViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ThemeState(
             themeMode = preferencesRepository.getThemeMode(),
+            themeColor = preferencesRepository.getThemeColor(),
             isDynamicColorEnabled = preferencesRepository.isDynamicColorEnabled()
         )
     )
@@ -42,6 +47,12 @@ class ThemeViewModel @Inject constructor(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             preferencesRepository.setThemeMode(mode)
+        }
+    }
+
+    fun setThemeColor(color: ThemeColor) {
+        viewModelScope.launch {
+            preferencesRepository.setThemeColor(color)
         }
     }
 
