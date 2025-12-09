@@ -2,8 +2,9 @@ package com.letsdoit.app.presentation.navigation
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
-    object TaskDetails : Screen("task_details/{taskId}") {
-        fun createRoute(taskId: String) = "task_details/$taskId"
+    object TaskDetails : Screen("task_details/{taskId}?title={title}") {
+        fun createRoute(taskId: String, title: String? = null) =
+            if (title != null) "task_details/$taskId?title=$title" else "task_details/$taskId"
     }
     object Settings : Screen("settings")
     object Kanban : Screen("kanban")

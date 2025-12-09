@@ -10,6 +10,7 @@ data class Task(
     val status: String,
     val dueDate: LocalDateTime?,
     val priority: Int,
+    val createdAt: LocalDateTime,
     val isSynced: Boolean = true,
     val calendarEventId: Long? = null,
     val recurrenceRule: String? = null

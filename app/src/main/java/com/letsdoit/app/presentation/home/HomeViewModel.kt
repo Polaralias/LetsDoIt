@@ -2,6 +2,7 @@ package com.letsdoit.app.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.letsdoit.app.domain.ai.SuggestionEngine
 import com.letsdoit.app.domain.usecase.project.GetSelectedProjectUseCase
 import com.letsdoit.app.domain.usecase.task.GetTasksUseCase
 import com.letsdoit.app.domain.usecase.task.RefreshTasksUseCase
@@ -22,7 +23,8 @@ class HomeViewModel @Inject constructor(
     private val getTasksUseCase: GetTasksUseCase,
     private val toggleTaskStatusUseCase: ToggleTaskStatusUseCase,
     private val refreshTasksUseCase: RefreshTasksUseCase,
-    private val getSelectedProjectUseCase: GetSelectedProjectUseCase
+    private val getSelectedProjectUseCase: GetSelectedProjectUseCase,
+    private val suggestionEngine: SuggestionEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeState())
@@ -33,6 +35,15 @@ class HomeViewModel @Inject constructor(
 
     init {
         observeSelectedProject()
+        observeSuggestions()
+    }
+
+    private fun observeSuggestions() {
+        suggestionEngine.getSuggestions()
+            .onEach { suggestions ->
+                _uiState.value = _uiState.value.copy(suggestions = suggestions)
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun observeSelectedProject() {

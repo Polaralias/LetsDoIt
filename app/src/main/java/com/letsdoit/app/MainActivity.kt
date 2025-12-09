@@ -61,6 +61,24 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onProjectListClick = {
                                     navController.navigate(Screen.ProjectList.route)
+                                },
+                                onSuggestionClick = { title ->
+                                    // Navigate to create new task with pre-filled title
+                                    // We need to pass the title to TaskDetailScreen
+                                    // For now, let's just create a "new" task and maybe we can pass arguments later
+                                    // or just navigate to "new" and let the user type.
+                                    // To do it properly, we should pass title as a nav argument or share via ViewModel
+
+                                    // Since Screen.TaskDetails.createRoute takes an ID, we can't easily pass the title in the ID.
+                                    // However, we can encode it in the URL if we change the route definition, or use a shared ViewModel.
+                                    // Or we can add an optional query parameter?
+
+                                    // Let's assume for now we just open the "new" screen.
+                                    // Ideally we should pre-fill.
+                                    // I'll append a query parameter ?title=...
+
+                                    val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                                    navController.navigate("task_details/new?title=$encodedTitle")
                                 }
                             )
                         }

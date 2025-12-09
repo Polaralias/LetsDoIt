@@ -24,6 +24,7 @@ fun TaskEntity.toDomain(): Task {
         status = status,
         dueDate = dueDate?.toLocalDateTime(),
         priority = priority,
+        createdAt = createdAt.toLocalDateTime(),
         isSynced = isSynced,
         calendarEventId = calendarEventId,
         recurrenceRule = recurrenceRule
@@ -39,7 +40,7 @@ fun Task.toEntity(): TaskEntity {
         status = status,
         dueDate = dueDate?.toEpochMilli(),
         priority = priority,
-        createdAt = System.currentTimeMillis(),
+        createdAt = createdAt.toEpochMilli(),
         updatedAt = System.currentTimeMillis(),
         isSynced = isSynced,
         calendarEventId = calendarEventId,
