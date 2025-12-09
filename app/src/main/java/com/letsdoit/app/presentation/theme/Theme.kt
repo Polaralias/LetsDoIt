@@ -1,4 +1,5 @@
 package com.letsdoit.app.presentation.theme
+import com.letsdoit.app.domain.model.ThemeColor
 import com.letsdoit.app.domain.model.ThemeMode
 
 import android.app.Activity
@@ -28,9 +29,46 @@ private val LightColorScheme = lightColorScheme(
     tertiary = Pink40
 )
 
+private val BlueDarkColorScheme = darkColorScheme(
+    primary = Blue80,
+    secondary = Blue80,
+    tertiary = Pink80
+)
+
+private val BlueLightColorScheme = lightColorScheme(
+    primary = Blue40,
+    secondary = Blue40,
+    tertiary = Pink40
+)
+
+private val GreenDarkColorScheme = darkColorScheme(
+    primary = Green80,
+    secondary = Green80,
+    tertiary = Pink80
+)
+
+private val GreenLightColorScheme = lightColorScheme(
+    primary = Green40,
+    secondary = Green40,
+    tertiary = Pink40
+)
+
+private val OrangeDarkColorScheme = darkColorScheme(
+    primary = Orange80,
+    secondary = Orange80,
+    tertiary = Pink80
+)
+
+private val OrangeLightColorScheme = lightColorScheme(
+    primary = Orange40,
+    secondary = Orange40,
+    tertiary = Pink40
+)
+
 @Composable
 fun LetsDoItTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
+    themeColor: ThemeColor = ThemeColor.PURPLE,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
@@ -46,8 +84,12 @@ fun LetsDoItTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else -> when (themeColor) {
+            ThemeColor.PURPLE -> if (darkTheme) DarkColorScheme else LightColorScheme
+            ThemeColor.BLUE -> if (darkTheme) BlueDarkColorScheme else BlueLightColorScheme
+            ThemeColor.GREEN -> if (darkTheme) GreenDarkColorScheme else GreenLightColorScheme
+            ThemeColor.ORANGE -> if (darkTheme) OrangeDarkColorScheme else OrangeLightColorScheme
+        }
     }
     val view = LocalView.current
     if (!view.isInEditMode) {

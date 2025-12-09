@@ -46,8 +46,9 @@ Before producing work, the agent should fully understand the referenced skill do
     *   **Kanban Board**: Drag-and-drop workflow visualization.
     *   **Recurring Tasks**: Logic for repeating tasks upon completion.
     *   **List Management**: List selection UI and multi-list support.
+    *   **Dynamic Theming**: Custom color palettes and theme modes.
+    *   **AI Suggestions**: Suggest tasks based on history.
 
 ### Pending / Next Steps
 *   **Phase 3 (Advanced)**:
-    *   **Dynamic Theming**: Custom color palettes.
-    *   **AI Suggestions**: Suggest tasks based on history.
+    *   **Webhooks**: Real-time Sync (Requires Backend).

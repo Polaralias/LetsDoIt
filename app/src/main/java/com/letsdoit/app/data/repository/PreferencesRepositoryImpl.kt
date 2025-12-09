@@ -1,6 +1,7 @@
 package com.letsdoit.app.data.repository
 
 import android.content.SharedPreferences
+import com.letsdoit.app.domain.model.ThemeColor
 import com.letsdoit.app.domain.model.ThemeMode
 import com.letsdoit.app.domain.repository.PreferencesRepository
 import kotlinx.coroutines.channels.awaitClose
@@ -17,6 +18,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         const val KEY_SELECTED_CALENDAR_ID = "selected_calendar_id"
         const val KEY_SELECTED_LIST_ID = "selected_list_id"
         const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_THEME_COLOR = "theme_color"
         const val KEY_DYNAMIC_COLOR_ENABLED = "dynamic_color_enabled"
     }
 
@@ -84,6 +86,36 @@ class PreferencesRepositoryImpl @Inject constructor(
         }
         sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
         trySend(getThemeMode())
+        awaitClose { sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    override fun getThemeColor(): ThemeColor {
+        val colorStr = sharedPreferences.getString(KEY_THEME_COLOR, ThemeColor.PURPLE.name)
+        return try {
+            ThemeColor.valueOf(colorStr ?: ThemeColor.PURPLE.name)
+        } catch (e: Exception) {
+            ThemeColor.PURPLE
+        }
+    }
+
+    override fun setThemeColor(color: ThemeColor) {
+        sharedPreferences.edit().putString(KEY_THEME_COLOR, color.name).apply()
+    }
+
+    override fun getThemeColorFlow(): Flow<ThemeColor> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == KEY_THEME_COLOR) {
+                val colorStr = prefs.getString(key, ThemeColor.PURPLE.name)
+                val color = try {
+                    ThemeColor.valueOf(colorStr ?: ThemeColor.PURPLE.name)
+                } catch (e: Exception) {
+                    ThemeColor.PURPLE
+                }
+                trySend(color)
+            }
+        }
+        sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
+        trySend(getThemeColor())
         awaitClose { sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
