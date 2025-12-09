@@ -19,8 +19,8 @@ class GetTasksUseCaseTest {
     @Test
     fun `invoke returns flow from repository`() = runTest {
         val tasks = listOf(
-            Task("1", "list1", "Title 1", null, "open", null, 1, true),
-            Task("2", "list1", "Title 2", null, "open", null, 1, true)
+            Task("1", "list1", "Title 1", null, "open", null, 1, java.time.LocalDateTime.now(), true),
+            Task("2", "list1", "Title 2", null, "open", null, 1, java.time.LocalDateTime.now(), true)
         )
         every { repository.getTasksFlow(null) } returns flowOf(tasks)
 

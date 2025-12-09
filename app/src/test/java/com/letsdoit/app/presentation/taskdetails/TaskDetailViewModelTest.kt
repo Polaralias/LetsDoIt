@@ -69,7 +69,8 @@ class TaskDetailViewModelTest {
             description = "Desc",
             status = "Open",
             dueDate = null,
-            priority = 1
+            priority = 1,
+            createdAt = java.time.LocalDateTime.now()
         )
         coEvery { getTaskUseCase(taskId) } returns task
         every { getSelectedProjectUseCase.getSync() } returns "list1"

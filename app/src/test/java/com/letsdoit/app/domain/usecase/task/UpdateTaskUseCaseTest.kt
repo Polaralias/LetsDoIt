@@ -31,6 +31,7 @@ class UpdateTaskUseCaseTest {
             dueDate = LocalDateTime.now().plusDays(1),
             priority = 1,
             listId = "list1",
+            createdAt = java.time.LocalDateTime.now(),
             isSynced = false
         )
 
@@ -50,6 +51,7 @@ class UpdateTaskUseCaseTest {
             dueDate = null,
             priority = 1,
             listId = "list1",
+            createdAt = java.time.LocalDateTime.now(),
             isSynced = false
         )
 
@@ -69,6 +71,7 @@ class UpdateTaskUseCaseTest {
             dueDate = LocalDateTime.now().plusDays(1),
             priority = 1,
             listId = "list1",
+            createdAt = java.time.LocalDateTime.now(),
             isSynced = false
         )
 
@@ -88,6 +91,7 @@ class UpdateTaskUseCaseTest {
             dueDate = LocalDateTime.now().plusDays(1),
             priority = 1,
             listId = "list1",
+            createdAt = java.time.LocalDateTime.now(),
             isSynced = false
         )
 
@@ -108,6 +112,7 @@ class UpdateTaskUseCaseTest {
              dueDate = now,
              priority = 1,
              listId = "list1",
+             createdAt = java.time.LocalDateTime.now(),
              isSynced = true,
              recurrenceRule = "FREQ=DAILY"
         )

@@ -33,6 +33,7 @@ class TaskDetailViewModel @Inject constructor(
     val uiState: StateFlow<TaskDetailState> = _uiState.asStateFlow()
 
     private val taskId: String? = savedStateHandle["taskId"]
+    private val prefilledTitle: String? = savedStateHandle["title"]
 
     private var nlpJob: Job? = null
 
@@ -46,11 +47,12 @@ class TaskDetailViewModel @Inject constructor(
                 task = Task(
                     id = UUID.randomUUID().toString(),
                     listId = listId,
-                    title = "",
+                    title = prefilledTitle ?: "",
                     description = "",
                     status = "Open",
                     dueDate = null,
                     priority = 0,
+                    createdAt = java.time.LocalDateTime.now(),
                     isSynced = false
                 )
             )

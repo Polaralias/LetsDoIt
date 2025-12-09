@@ -30,6 +30,7 @@ class CreateTaskUseCaseTest {
             status = "open",
             dueDate = null,
             priority = 1,
+            createdAt = java.time.LocalDateTime.now(),
             isSynced = false
         )
 
@@ -51,6 +52,7 @@ class CreateTaskUseCaseTest {
             status = "open",
             dueDate = null,
             priority = 1,
+            createdAt = java.time.LocalDateTime.now(),
             isSynced = false
         )
 
