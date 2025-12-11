@@ -2,8 +2,10 @@ package com.letsdoit.app.data.worker
 
 import android.content.Context
 import androidx.work.Constraints
+import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,5 +31,21 @@ class SyncScheduler @Inject constructor(
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )
+    }
+
+    fun scheduleOneTimeSync(taskId: String? = null) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val builder = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+
+        if (taskId != null) {
+            val data = Data.Builder().putString("taskId", taskId).build()
+            builder.setInputData(data)
+        }
+
+        WorkManager.getInstance(context).enqueue(builder.build())
     }
 }

@@ -85,6 +85,17 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun refreshTask(taskId: String) {
+        try {
+            val taskDto = api.getTask(taskId)
+            val listId = taskDto.list.id
+            val entity = taskDto.toEntity(listId)
+            taskDao.insertTask(entity)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override suspend fun syncUnsyncedTasks() {
         val unsynced = taskDao.getUnsyncedTasks()
         for (entity in unsynced) {

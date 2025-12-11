@@ -20,9 +20,14 @@ class SyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            taskRepository.syncUnsyncedTasks()
-            val listId = preferencesRepository.getSelectedListId() ?: Constants.DEMO_LIST_ID
-            taskRepository.refreshTasks(listId)
+            val taskId = inputData.getString("taskId")
+            if (taskId != null) {
+                taskRepository.refreshTask(taskId)
+            } else {
+                taskRepository.syncUnsyncedTasks()
+                val listId = preferencesRepository.getSelectedListId() ?: Constants.DEMO_LIST_ID
+                taskRepository.refreshTasks(listId)
+            }
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
