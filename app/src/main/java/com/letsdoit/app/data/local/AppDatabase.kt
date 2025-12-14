@@ -20,7 +20,8 @@ import com.letsdoit.app.data.local.entity.TaskEntity
         ListEntity::class,
         TaskEntity::class
     ],
-    version = 3
+    version = 3,
+    exportSchema = false
 )
 @TypeConverters(DateConverter::class)
 abstract class AppDatabase : RoomDatabase() {

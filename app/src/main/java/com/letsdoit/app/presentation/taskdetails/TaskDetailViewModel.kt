@@ -175,7 +175,7 @@ class TaskDetailViewModel @Inject constructor(
              }
 
              if (taskToSave.priority == 0 && nlpResult.detectedPriority != null) {
-                 taskToSave = taskToSave.copy(priority = nlpResult.detectedPriority!!)
+                 taskToSave = taskToSave.copy(priority = nlpResult.detectedPriority)
                  appliedChange = true
              }
 

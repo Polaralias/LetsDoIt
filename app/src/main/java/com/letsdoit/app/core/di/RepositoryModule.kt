@@ -41,4 +41,10 @@ abstract class RepositoryModule {
     abstract fun bindProjectRepository(
         projectRepositoryImpl: ProjectRepositoryImpl
     ): ProjectRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindInsightsRepository(
+        insightsRepositoryImpl: com.letsdoit.app.data.repository.InsightsRepositoryImpl
+    ): com.letsdoit.app.domain.repository.InsightsRepository
 }

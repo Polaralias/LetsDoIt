@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.letsdoit.app.presentation.home.HomeScreen
+import com.letsdoit.app.presentation.insights.InsightsScreen
 import com.letsdoit.app.presentation.kanban.KanbanScreen
 import com.letsdoit.app.presentation.project.ProjectListScreen
 import com.letsdoit.app.presentation.settings.SettingsScreen
@@ -63,6 +64,9 @@ class MainActivity : ComponentActivity() {
                                 onProjectListClick = {
                                     navController.navigate(Screen.ProjectList.route)
                                 },
+                                onInsightsClick = {
+                                    navController.navigate(Screen.Insights.route)
+                                },
                                 onSuggestionClick = { title ->
                                     // Navigate to create new task with pre-filled title
                                     // We need to pass the title to TaskDetailScreen
@@ -95,6 +99,13 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Settings.route) {
                             SettingsScreen()
+                        }
+                        composable(Screen.Insights.route) {
+                            InsightsScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                }
+                            )
                         }
                         composable(Screen.ProjectList.route) {
                             ProjectListScreen(
