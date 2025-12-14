@@ -3,9 +3,10 @@ package com.letsdoit.app.presentation.taskdetails
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.letsdoit.app.core.util.Constants
+import com.letsdoit.app.domain.model.ProjectType
 import com.letsdoit.app.domain.model.Task
 import com.letsdoit.app.domain.nlp.NlpEngine
+import com.letsdoit.app.domain.usecase.project.GetProjectsUseCase
 import com.letsdoit.app.domain.usecase.project.GetSelectedProjectUseCase
 import com.letsdoit.app.domain.usecase.task.CreateTaskUseCase
 import com.letsdoit.app.domain.usecase.task.GetTaskUseCase
@@ -16,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -26,6 +28,7 @@ class TaskDetailViewModel @Inject constructor(
     private val createTaskUseCase: CreateTaskUseCase,
     private val updateTaskUseCase: UpdateTaskUseCase,
     private val getSelectedProjectUseCase: GetSelectedProjectUseCase,
+    private val getProjectsUseCase: GetProjectsUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -41,21 +44,41 @@ class TaskDetailViewModel @Inject constructor(
         if (taskId != null && taskId != "new") {
             loadTask(taskId)
         } else {
-            val listId = getSelectedProjectUseCase.getSync() ?: Constants.DEMO_LIST_ID
-            // Initialize with a new empty task
-            _uiState.value = _uiState.value.copy(
-                task = Task(
-                    id = UUID.randomUUID().toString(),
-                    listId = listId,
-                    title = prefilledTitle ?: "",
-                    description = "",
-                    status = "Open",
-                    dueDate = null,
-                    priority = 0,
-                    createdAt = java.time.LocalDateTime.now(),
-                    isSynced = false
+            initializeNewTask()
+        }
+    }
+
+    private fun initializeNewTask() {
+        viewModelScope.launch {
+            val selectedListId = getSelectedProjectUseCase.getSync()
+            var listId = selectedListId
+
+            if (listId == null) {
+                // Try to find first available list
+                val projects = getProjectsUseCase().firstOrNull()
+                listId = projects?.find { it.type == ProjectType.LIST }?.id
+            }
+
+            if (listId != null) {
+                // Initialize with a new empty task
+                _uiState.value = _uiState.value.copy(
+                    task = Task(
+                        id = UUID.randomUUID().toString(),
+                        listId = listId,
+                        title = prefilledTitle ?: "",
+                        description = "",
+                        status = "Open",
+                        dueDate = null,
+                        priority = 0,
+                        createdAt = java.time.LocalDateTime.now(),
+                        isSynced = false
+                    )
                 )
-            )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    loadError = "No lists available. Please create or sync a list first."
+                )
+            }
         }
     }
 
