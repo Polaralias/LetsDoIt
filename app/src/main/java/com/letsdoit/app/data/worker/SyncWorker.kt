@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.letsdoit.app.core.util.Constants
 import com.letsdoit.app.domain.repository.PreferencesRepository
 import com.letsdoit.app.domain.repository.TaskRepository
 import dagger.assisted.Assisted
@@ -25,8 +24,10 @@ class SyncWorker @AssistedInject constructor(
                 taskRepository.refreshTask(taskId)
             } else {
                 taskRepository.syncUnsyncedTasks()
-                val listId = preferencesRepository.getSelectedListId() ?: Constants.DEMO_LIST_ID
-                taskRepository.refreshTasks(listId)
+                val listId = preferencesRepository.getSelectedListId()
+                if (listId != null) {
+                    taskRepository.refreshTasks(listId)
+                }
             }
             Result.success()
         } catch (e: Exception) {

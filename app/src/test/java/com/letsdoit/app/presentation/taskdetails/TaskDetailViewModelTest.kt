@@ -1,8 +1,8 @@
 package com.letsdoit.app.presentation.taskdetails
 
 import androidx.lifecycle.SavedStateHandle
-import com.letsdoit.app.core.util.Constants
 import com.letsdoit.app.domain.model.Task
+import com.letsdoit.app.domain.usecase.project.GetProjectsUseCase
 import com.letsdoit.app.domain.usecase.project.GetSelectedProjectUseCase
 import com.letsdoit.app.domain.usecase.task.CreateTaskUseCase
 import com.letsdoit.app.domain.usecase.task.GetTaskUseCase
@@ -32,6 +32,7 @@ class TaskDetailViewModelTest {
     private val createTaskUseCase: CreateTaskUseCase = mockk(relaxed = true)
     private val updateTaskUseCase: UpdateTaskUseCase = mockk(relaxed = true)
     private val getSelectedProjectUseCase: GetSelectedProjectUseCase = mockk()
+    private val getProjectsUseCase: GetProjectsUseCase = mockk()
     private lateinit var viewModel: TaskDetailViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -48,14 +49,16 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `when taskId is new, init creates empty task`() = runTest {
-        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
+        every { getSelectedProjectUseCase.getSync() } returns "list_1"
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, getProjectsUseCase, savedStateHandle)
+
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertNotNull(state.task)
         assertEquals("", state.task?.title)
-        assertEquals(Constants.DEMO_LIST_ID, state.task?.listId)
+        assertEquals("list_1", state.task?.listId)
         assertNull(state.loadError)
     }
 
@@ -76,7 +79,7 @@ class TaskDetailViewModelTest {
         every { getSelectedProjectUseCase.getSync() } returns "list1"
 
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to taskId))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, getProjectsUseCase, savedStateHandle)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -87,10 +90,11 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `onTitleChange updates task title`() = runTest {
-        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
+        every { getSelectedProjectUseCase.getSync() } returns "list_1"
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, getProjectsUseCase, savedStateHandle)
 
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.onTitleChange("New Title")
 
         assertEquals("New Title", viewModel.uiState.value.task?.title)
@@ -98,10 +102,11 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `saveTask calls create when new`() = runTest {
-        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
+        every { getSelectedProjectUseCase.getSync() } returns "list_1"
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, getProjectsUseCase, savedStateHandle)
 
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.onTitleChange("Task to Save")
         viewModel.saveTask()
 
@@ -113,12 +118,13 @@ class TaskDetailViewModelTest {
 
     @Test
     fun `saveTask sets saveError when fails`() = runTest {
-        every { getSelectedProjectUseCase.getSync() } returns Constants.DEMO_LIST_ID
+        every { getSelectedProjectUseCase.getSync() } returns "list_1"
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to "new"))
-        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, savedStateHandle)
+        viewModel = TaskDetailViewModel(getTaskUseCase, createTaskUseCase, updateTaskUseCase, getSelectedProjectUseCase, getProjectsUseCase, savedStateHandle)
 
         coEvery { createTaskUseCase(any()) } throws RuntimeException("Error")
 
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.onTitleChange("Task to Save")
         viewModel.saveTask()
 
