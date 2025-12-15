@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -50,6 +51,7 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onKanbanClick: () -> Unit,
     onProjectListClick: () -> Unit,
+    onInsightsClick: () -> Unit,
     onSuggestionClick: (String) -> Unit // New callback for suggestions
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -64,6 +66,9 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onInsightsClick) {
+                        Icon(Icons.Default.Info, contentDescription = "Insights")
+                    }
                     IconButton(onClick = onKanbanClick) {
                         Icon(
                             imageVector = androidx.compose.material.icons.Icons.Default.List,

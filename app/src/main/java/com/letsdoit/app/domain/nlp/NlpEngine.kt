@@ -154,7 +154,7 @@ object NlpEngine {
             val time = LocalTime.of(hour, minute)
 
             if (detectedDate != null) {
-                 detectedDate = detectedDate!!.with(time)
+                 detectedDate = detectedDate.with(time)
             } else if (date != null) {
                 detectedDate = LocalDateTime.of(date, time)
             } else {
