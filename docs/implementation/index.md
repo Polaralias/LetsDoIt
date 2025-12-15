@@ -15,3 +15,5 @@ This directory contains detailed implementation guides for each phase of the "Le
 9. [Background Sync](09_background_sync.md) - WorkManager and synchronization logic.
 10. [Phase 2: Expansion](10_phase2_expansion.md) - Kanban, recurring tasks, and advanced NLP.
 11. [Phase 3: Advanced](11_phase3_advanced.md) - Theming, webhooks, and AI planning.
+12. [Phase 4: Insights](12_phase4_insights.md) - Analytics and visualization.
+13. [Phase 5: Search](13_phase5_search.md) - Task search and filtering.

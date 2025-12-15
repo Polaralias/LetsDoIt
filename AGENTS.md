@@ -30,14 +30,14 @@ Before producing work, the agent should fully understand the referenced skill do
 
 ## Project Status
 
-**Current Phase:** Phase 3 (Advanced Features & Polish)
+**Current Phase:** Phase 5 (Search & Filtering)
 
 ### Completed
 *   **Project Setup**: Gradle, Basic Structure, Hilt, Room.
 *   **Local Data Layer**: Room DB, Entities, DAOs.
 *   **Network Layer**: ClickUp API Integration.
 *   **Domain Layer**: Clean Architecture, Use Cases.
-*   **Presentation Layer**: Home, Details, Settings, Kanban Screens.
+*   **Presentation Layer**: Home, Details, Settings, Kanban Screens, Insights Screen.
 *   **Core Features**:
     *   **Background Sync**: WorkManager.
     *   **NLP Engine**: Date, Priority, and Recurrence parsing.
@@ -48,7 +48,9 @@ Before producing work, the agent should fully understand the referenced skill do
     *   **List Management**: List selection UI and multi-list support.
     *   **Dynamic Theming**: Custom color palettes and theme modes.
     *   **AI Suggestions**: Suggest tasks based on history.
+    *   **Insights**: Task statistics and charts.
+    *   **Webhooks**: Android-side FCM integration.
 
 ### Pending / Next Steps
-*   **Phase 3 (Advanced)**:
-    *   **Webhooks**: Real-time Sync (Requires Backend).
+*   **Phase 5 (Search)**:
+    *   **Search**: Task search by title/description.

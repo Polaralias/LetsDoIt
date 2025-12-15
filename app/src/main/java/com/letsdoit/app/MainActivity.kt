@@ -18,6 +18,7 @@ import com.letsdoit.app.presentation.home.HomeScreen
 import com.letsdoit.app.presentation.insights.InsightsScreen
 import com.letsdoit.app.presentation.kanban.KanbanScreen
 import com.letsdoit.app.presentation.project.ProjectListScreen
+import com.letsdoit.app.presentation.search.SearchScreen
 import com.letsdoit.app.presentation.settings.SettingsScreen
 import com.letsdoit.app.presentation.taskdetails.TaskDetailScreen
 import com.letsdoit.app.presentation.navigation.Screen
@@ -67,6 +68,9 @@ class MainActivity : ComponentActivity() {
                                 onInsightsClick = {
                                     navController.navigate(Screen.Insights.route)
                                 },
+                                onSearchClick = {
+                                    navController.navigate(Screen.Search.route)
+                                },
                                 onSuggestionClick = { title ->
                                     // Navigate to create new task with pre-filled title
                                     // We need to pass the title to TaskDetailScreen
@@ -111,6 +115,16 @@ class MainActivity : ComponentActivity() {
                             ProjectListScreen(
                                 onBackClick = {
                                     navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable(Screen.Search.route) {
+                            SearchScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onTaskClick = { taskId ->
+                                    navController.navigate(Screen.TaskDetails.createRoute(taskId))
                                 }
                             )
                         }

@@ -31,4 +31,7 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE isSynced = 0")
     suspend fun getUnsyncedTasks(): List<TaskEntity>
+
+    @Query("SELECT * FROM tasks WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%'")
+    fun searchTasks(query: String): Flow<List<TaskEntity>>
 }

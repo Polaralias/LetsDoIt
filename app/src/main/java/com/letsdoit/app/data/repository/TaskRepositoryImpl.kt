@@ -130,4 +130,10 @@ class TaskRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override fun searchTasks(query: String): Flow<List<Task>> {
+        return taskDao.searchTasks(query).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
 }
