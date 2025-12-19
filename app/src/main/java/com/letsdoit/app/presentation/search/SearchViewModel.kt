@@ -2,6 +2,7 @@ package com.letsdoit.app.presentation.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.letsdoit.app.domain.model.SearchFilter
 import com.letsdoit.app.domain.model.Task
 import com.letsdoit.app.domain.usecase.task.SearchTasksUseCase
 import com.letsdoit.app.domain.usecase.task.ToggleTaskStatusUseCase
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -26,14 +28,19 @@ class SearchViewModel @Inject constructor(
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
+    private val _filterState = MutableStateFlow(SearchFilter())
+    val filterState: StateFlow<SearchFilter> = _filterState.asStateFlow()
+
     @OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val searchResults: StateFlow<List<Task>> = _query
+    val searchResults: StateFlow<List<Task>> = combine(_query, _filterState) { query, filter ->
+        Pair(query, filter)
+    }
         .debounce(300)
-        .flatMapLatest { query ->
+        .flatMapLatest { (query, filter) ->
             if (query.isBlank()) {
                 flowOf(emptyList())
             } else {
-                searchTasksUseCase(query)
+                searchTasksUseCase(query, filter)
             }
         }
         .stateIn(
@@ -54,5 +61,42 @@ class SearchViewModel @Inject constructor(
                 e.printStackTrace()
             }
         }
+    }
+
+    fun toggleStatusFilter(statusCategory: String) {
+        val currentStatus = _filterState.value.status.toMutableSet()
+        val targetStatuses = if (statusCategory == "Active") {
+            listOf("Open", "To Do", "todo", "", "In Progress", "doing")
+        } else {
+            listOf("Completed", "Done", "complete", "closed")
+        }
+
+        if (targetStatuses.all { currentStatus.contains(it) }) {
+            currentStatus.removeAll(targetStatuses)
+        } else {
+            currentStatus.addAll(targetStatuses)
+        }
+
+        _filterState.value = _filterState.value.copy(status = currentStatus.toList())
+    }
+
+    fun togglePriorityFilter(priority: Int) {
+        val current = _filterState.value.priority.toMutableList()
+        if (current.contains(priority)) {
+            current.remove(priority)
+        } else {
+            current.add(priority)
+        }
+        _filterState.value = _filterState.value.copy(priority = current)
+    }
+
+    fun isStatusSelected(statusCategory: String): Boolean {
+        val currentStatus = _filterState.value.status
+        val targetStatuses = if (statusCategory == "Active") {
+            listOf("Open", "To Do", "todo", "", "In Progress", "doing")
+        } else {
+            listOf("Completed", "Done", "complete", "closed")
+        }
+        return currentStatus.isNotEmpty() && targetStatuses.all { currentStatus.contains(it) }
     }
 }
