@@ -6,6 +6,7 @@ import com.letsdoit.app.domain.model.SearchFilter
 import com.letsdoit.app.domain.model.Task
 import com.letsdoit.app.domain.usecase.task.SearchTasksUseCase
 import com.letsdoit.app.domain.usecase.task.ToggleTaskStatusUseCase
+import com.letsdoit.app.domain.util.TaskStatusUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -66,9 +67,9 @@ class SearchViewModel @Inject constructor(
     fun toggleStatusFilter(statusCategory: String) {
         val currentStatus = _filterState.value.status.toMutableSet()
         val targetStatuses = if (statusCategory == "Active") {
-            listOf("Open", "To Do", "todo", "", "In Progress", "doing")
+            TaskStatusUtil.TODO_STATUSES + TaskStatusUtil.IN_PROGRESS_STATUSES
         } else {
-            listOf("Completed", "Done", "complete", "closed")
+            TaskStatusUtil.COMPLETED_STATUSES
         }
 
         if (targetStatuses.all { currentStatus.contains(it) }) {
@@ -93,9 +94,9 @@ class SearchViewModel @Inject constructor(
     fun isStatusSelected(statusCategory: String): Boolean {
         val currentStatus = _filterState.value.status
         val targetStatuses = if (statusCategory == "Active") {
-            listOf("Open", "To Do", "todo", "", "In Progress", "doing")
+            TaskStatusUtil.TODO_STATUSES + TaskStatusUtil.IN_PROGRESS_STATUSES
         } else {
-            listOf("Completed", "Done", "complete", "closed")
+            TaskStatusUtil.COMPLETED_STATUSES
         }
         return currentStatus.isNotEmpty() && targetStatuses.all { currentStatus.contains(it) }
     }

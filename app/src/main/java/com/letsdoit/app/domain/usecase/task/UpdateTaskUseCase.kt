@@ -6,6 +6,7 @@ import com.letsdoit.app.domain.repository.CalendarRepository
 import com.letsdoit.app.domain.repository.PreferencesRepository
 import com.letsdoit.app.domain.repository.TaskRepository
 import com.letsdoit.app.domain.util.RecurrenceUtil
+import com.letsdoit.app.domain.util.TaskStatusUtil
 import java.util.UUID
 import javax.inject.Inject
 
@@ -26,7 +27,7 @@ class UpdateTaskUseCase @Inject constructor(
 
         if (preferencesRepository.isCalendarSyncEnabled()) {
              if (task.calendarEventId != null) {
-                 if (task.dueDate != null && !isCompleted(task.status)) {
+                 if (task.dueDate != null && !TaskStatusUtil.isCompleted(task.status)) {
                      calendarRepository.updateEvent(task)
                  } else {
                      // Task completed or due date removed
@@ -39,7 +40,7 @@ class UpdateTaskUseCase @Inject constructor(
                          calendarRepository.updateEvent(task)
                      }
                  }
-             } else if (task.dueDate != null && !isCompleted(task.status)) {
+             } else if (task.dueDate != null && !TaskStatusUtil.isCompleted(task.status)) {
                  // Create event if it doesn't exist but should
                  val calendarId = preferencesRepository.getSelectedCalendarId()
                  if (calendarId != -1L) {
@@ -54,7 +55,7 @@ class UpdateTaskUseCase @Inject constructor(
         repository.updateTask(taskToSave)
 
         // Handle Recurrence
-        if (oldTask != null && !isCompleted(oldTask.status) && isCompleted(taskToSave.status)) {
+        if (oldTask != null && !TaskStatusUtil.isCompleted(oldTask.status) && TaskStatusUtil.isCompleted(taskToSave.status)) {
             val rule = taskToSave.recurrenceRule
             val date = taskToSave.dueDate
             if (rule != null && date != null) {
@@ -62,7 +63,7 @@ class UpdateTaskUseCase @Inject constructor(
                 if (nextDate != null) {
                     val newTask = taskToSave.copy(
                         id = UUID.randomUUID().toString(),
-                        status = "open",
+                        status = TaskStatusUtil.OPEN,
                         dueDate = nextDate,
                         isSynced = false,
                         calendarEventId = null
@@ -72,16 +73,10 @@ class UpdateTaskUseCase @Inject constructor(
             }
         }
 
-        if (taskToSave.dueDate != null && !isCompleted(taskToSave.status)) {
+        if (taskToSave.dueDate != null && !TaskStatusUtil.isCompleted(taskToSave.status)) {
             alarmScheduler.scheduleAlarm(taskToSave)
         } else {
             alarmScheduler.cancelAlarm(taskToSave)
         }
-    }
-
-    private fun isCompleted(status: String): Boolean {
-        return status.equals("Completed", ignoreCase = true) ||
-               status.equals("Done", ignoreCase = true) ||
-               status.equals("complete", ignoreCase = true)
     }
 }

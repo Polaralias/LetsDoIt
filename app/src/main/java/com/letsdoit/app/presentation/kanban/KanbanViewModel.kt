@@ -6,6 +6,7 @@ import com.letsdoit.app.domain.model.Task
 import com.letsdoit.app.domain.usecase.project.GetSelectedProjectUseCase
 import com.letsdoit.app.domain.usecase.task.GetTasksUseCase
 import com.letsdoit.app.domain.usecase.task.UpdateTaskUseCase
+import com.letsdoit.app.domain.util.TaskStatusUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,9 +65,9 @@ class KanbanViewModel @Inject constructor(
     }
 
     private fun groupTasks(tasks: List<Task>): Map<KanbanColumn, List<Task>> {
-        val todoTasks = tasks.filter { isTodo(it.status) }
-        val inProgressTasks = tasks.filter { isInProgress(it.status) }
-        val doneTasks = tasks.filter { isDone(it.status) }
+        val todoTasks = tasks.filter { TaskStatusUtil.isTodo(it.status) }
+        val inProgressTasks = tasks.filter { TaskStatusUtil.isInProgress(it.status) }
+        val doneTasks = tasks.filter { TaskStatusUtil.isCompleted(it.status) }
 
         return mapOf(
             KanbanColumn.TODO to todoTasks,
@@ -75,30 +76,11 @@ class KanbanViewModel @Inject constructor(
         )
     }
 
-    private fun isTodo(status: String): Boolean {
-        return status.equals("Open", ignoreCase = true) ||
-                status.equals("To Do", ignoreCase = true) ||
-                status.equals("todo", ignoreCase = true) ||
-                status.isBlank()
-    }
-
-    private fun isInProgress(status: String): Boolean {
-        return status.equals("In Progress", ignoreCase = true) ||
-                status.equals("doing", ignoreCase = true)
-    }
-
-    private fun isDone(status: String): Boolean {
-        return status.equals("Completed", ignoreCase = true) ||
-                status.equals("Done", ignoreCase = true) ||
-                status.equals("complete", ignoreCase = true) ||
-                status.equals("closed", ignoreCase = true)
-    }
-
     fun moveTask(task: Task, targetColumn: KanbanColumn) {
         val newStatus = when (targetColumn) {
-            KanbanColumn.TODO -> "Open"
-            KanbanColumn.IN_PROGRESS -> "In Progress"
-            KanbanColumn.DONE -> "Completed"
+            KanbanColumn.TODO -> TaskStatusUtil.OPEN
+            KanbanColumn.IN_PROGRESS -> TaskStatusUtil.IN_PROGRESS
+            KanbanColumn.DONE -> TaskStatusUtil.COMPLETED
         }
 
         if (!task.status.equals(newStatus, ignoreCase = true)) {
