@@ -1,6 +1,7 @@
 package com.letsdoit.app.domain.usecase.task
 
 import com.letsdoit.app.domain.repository.TaskRepository
+import com.letsdoit.app.domain.util.TaskStatusUtil
 import javax.inject.Inject
 
 class ToggleTaskStatusUseCase @Inject constructor(
@@ -9,7 +10,11 @@ class ToggleTaskStatusUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(taskId: String) {
         val task = repository.getTask(taskId) ?: return
-        val newStatus = if (task.status == "complete") "open" else "complete"
+        val newStatus = if (TaskStatusUtil.isCompleted(task.status)) {
+            TaskStatusUtil.OPEN
+        } else {
+            TaskStatusUtil.COMPLETED
+        }
         updateTaskUseCase(task.copy(status = newStatus))
     }
 }

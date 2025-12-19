@@ -3,6 +3,7 @@ package com.letsdoit.app.data.repository
 import com.letsdoit.app.data.local.dao.TaskDao
 import com.letsdoit.app.domain.model.InsightsData
 import com.letsdoit.app.domain.repository.InsightsRepository
+import com.letsdoit.app.domain.util.TaskStatusUtil
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -13,9 +14,8 @@ class InsightsRepositoryImpl @Inject constructor(
 
     override fun getInsights(): Flow<InsightsData> {
         return taskDao.getAllTasks().map { tasks ->
-             val completedStatuses = listOf("done", "completed", "closed")
-             val activeTasks = tasks.filter { !completedStatuses.contains(it.status.lowercase()) }
-             val completedTasks = tasks.filter { completedStatuses.contains(it.status.lowercase()) }
+             val activeTasks = tasks.filter { !TaskStatusUtil.isCompleted(it.status) }
+             val completedTasks = tasks.filter { TaskStatusUtil.isCompleted(it.status) }
 
              val byPriority = tasks.groupingBy { it.priority }.eachCount()
              val byStatus = tasks.groupingBy { it.status }.eachCount()

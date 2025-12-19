@@ -14,6 +14,7 @@ Verify all features, optimize performance, and ensure the application is ready f
 > *   **Database Migration**: Fixed parameter naming conventions in `DatabaseModule.kt` migrations. (Completed)
 > *   **UI Modernization**: Replaced deprecated `Icons.Default.ArrowBack` with `Icons.AutoMirrored.Filled.ArrowBack` for better RTL support. (Completed)
 > *   **Error Handling**: Added robust logging to `CalendarRepositoryImpl` to catch and log permission or content provider errors. (Completed)
+> *   **Status Consistency**: Standardized task status handling across the app (Toggle, Update, Kanban, Insights, Search) using `TaskStatusUtil` to resolve inconsistencies between "open"/"Open" and "done"/"complete"/"Completed". (Completed)
 
 ### 2. Verification
 > **Goal**: Confirm all tests pass.
