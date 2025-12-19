@@ -4,6 +4,7 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.provider.CalendarContract
+import android.util.Log
 import com.letsdoit.app.data.mapper.toEpochMilli
 import com.letsdoit.app.domain.model.CalendarAccount
 import com.letsdoit.app.domain.model.Task
@@ -17,6 +18,10 @@ import javax.inject.Inject
 class CalendarRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : CalendarRepository {
+
+    companion object {
+        private const val TAG = "CalendarRepository"
+    }
 
     override suspend fun getCalendars(): List<CalendarAccount> = withContext(Dispatchers.IO) {
         val calendars = mutableListOf<CalendarAccount>()
@@ -47,7 +52,7 @@ class CalendarRepositoryImpl @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error getting calendars", e)
         }
         return@withContext calendars
     }
@@ -70,7 +75,7 @@ class CalendarRepositoryImpl @Inject constructor(
             val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
             uri?.lastPathSegment?.toLongOrNull()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error adding event", e)
             null
         }
     }
@@ -93,7 +98,7 @@ class CalendarRepositoryImpl @Inject constructor(
         try {
             context.contentResolver.update(updateUri, values, null, null)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error updating event", e)
         }
         Unit
     }
@@ -103,7 +108,7 @@ class CalendarRepositoryImpl @Inject constructor(
         try {
             context.contentResolver.delete(deleteUri, null, null)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error deleting event", e)
         }
         Unit
     }

@@ -17,3 +17,4 @@ This directory contains detailed implementation guides for each phase of the "Le
 11. [Phase 3: Advanced](11_phase3_advanced.md) - Theming, webhooks, and AI planning.
 12. [Phase 4: Insights](12_phase4_insights.md) - Analytics and visualization.
 13. [Phase 5: Search](13_phase5_search.md) - Task search and filtering.
+14. [Phase 6: Polish & Release](14_phase6_polish_and_release.md) - Final verification and polish.

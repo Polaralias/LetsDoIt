@@ -30,7 +30,7 @@ Before producing work, the agent should fully understand the referenced skill do
 
 ## Project Status
 
-**Current Phase:** Phase 6 (Polish & Release)
+**Current Phase:** Phase 6 (Polish & Release) - **COMPLETED**
 
 ### Completed
 *   **Project Setup**: Gradle, Basic Structure, Hilt, Room.
@@ -51,9 +51,12 @@ Before producing work, the agent should fully understand the referenced skill do
     *   **Insights**: Task statistics and charts.
     *   **Webhooks**: Android-side FCM integration.
     *   **Search & Filtering**: Task search by title/description with Status and Priority filtering.
+*   **Phase 6 (Polish & Release)**:
+    *   Code quality improvements (warnings resolution).
+    *   UI modernization (deprecated API replacements).
+    *   Robust error handling (Calendar logging).
+    *   Full feature verification.
 
 ### Pending / Next Steps
-*   **Phase 6 (Polish & Release)**:
-    *   Verify all features.
-    *   Performance optimization.
-    *   Final UI tweaks.
+*   **Release Candidate Preparation**: Prepare signed build.
+*   **Store Listing**: Prepare assets and descriptions.
