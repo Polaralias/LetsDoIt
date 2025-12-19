@@ -52,7 +52,7 @@ object NlpEngine {
                 else -> null
             }
             if (detectedPriority != null) {
-                cleanTitle = cleanTitle.replace(priorityMatcher.group(0), "").trim()
+                cleanTitle = cleanTitle.replace(priorityMatcher.group(0)!!, "").trim()
             }
         }
 
@@ -60,12 +60,12 @@ object NlpEngine {
         val dailyMatcher = DAILY_PATTERN.matcher(cleanTitle)
         if (dailyMatcher.find()) {
             recurrenceRule = "FREQ=DAILY"
-            cleanTitle = cleanTitle.replace(dailyMatcher.group(0), "").trim()
+            cleanTitle = cleanTitle.replace(dailyMatcher.group(0)!!, "").trim()
         } else {
              val weeklyMatcher = WEEKLY_PATTERN.matcher(cleanTitle)
              if (weeklyMatcher.find()) {
                  recurrenceRule = "FREQ=WEEKLY"
-                 cleanTitle = cleanTitle.replace(weeklyMatcher.group(0), "").trim()
+                 cleanTitle = cleanTitle.replace(weeklyMatcher.group(0)!!, "").trim()
              } else {
                 val everyDayMatcher = EVERY_DAY_PATTERN.matcher(cleanTitle)
                 if (everyDayMatcher.find()) {
@@ -74,7 +74,7 @@ object NlpEngine {
                     if (dayOfWeek != null) {
                         val rruleDay = dayOfWeek.name.take(2)
                         recurrenceRule = "FREQ=WEEKLY;BYDAY=$rruleDay"
-                        cleanTitle = cleanTitle.replace(everyDayMatcher.group(0), "").trim()
+                        cleanTitle = cleanTitle.replace(everyDayMatcher.group(0)!!, "").trim()
                     }
                 }
              }
@@ -86,17 +86,17 @@ object NlpEngine {
         val tomorrowMatcher = TOMORROW_PATTERN.matcher(cleanTitle)
         if (tomorrowMatcher.find()) {
             date = now.toLocalDate().plusDays(1)
-            cleanTitle = cleanTitle.replace(tomorrowMatcher.group(0), "").trim()
+            cleanTitle = cleanTitle.replace(tomorrowMatcher.group(0)!!, "").trim()
         } else {
             val todayMatcher = TODAY_PATTERN.matcher(cleanTitle)
             if (todayMatcher.find()) {
                 date = now.toLocalDate()
-                cleanTitle = cleanTitle.replace(todayMatcher.group(0), "").trim()
+                cleanTitle = cleanTitle.replace(todayMatcher.group(0)!!, "").trim()
             } else {
                 val yesterdayMatcher = YESTERDAY_PATTERN.matcher(cleanTitle)
                 if (yesterdayMatcher.find()) {
                     date = now.toLocalDate().minusDays(1)
-                    cleanTitle = cleanTitle.replace(yesterdayMatcher.group(0), "").trim()
+                    cleanTitle = cleanTitle.replace(yesterdayMatcher.group(0)!!, "").trim()
                 }
             }
         }
@@ -109,7 +109,7 @@ object NlpEngine {
                 val targetDayOfWeek = getDayOfWeek(dayStr)
                 if (targetDayOfWeek != null) {
                     date = now.toLocalDate().with(TemporalAdjusters.next(targetDayOfWeek))
-                    cleanTitle = cleanTitle.replace(nextDayMatcher.group(0), "").trim()
+                    cleanTitle = cleanTitle.replace(nextDayMatcher.group(0)!!, "").trim()
                 }
             }
         }
@@ -131,7 +131,7 @@ object NlpEngine {
             detectedDate = tempDate
             date = tempDate.toLocalDate() // update date part just in case
 
-            cleanTitle = cleanTitle.replace(inTimeMatcher.group(0), "").trim()
+            cleanTitle = cleanTitle.replace(inTimeMatcher.group(0)!!, "").trim()
         }
 
         // 5. Detect "at [Time]"
@@ -167,7 +167,7 @@ object NlpEngine {
                     detectedDate = todayAtTime
                 }
             }
-            cleanTitle = cleanTitle.replace(atTimeMatcher.group(0), "").trim()
+            cleanTitle = cleanTitle.replace(atTimeMatcher.group(0)!!, "").trim()
         } else {
             // No time specified.
             if (detectedDate == null && date != null) {
