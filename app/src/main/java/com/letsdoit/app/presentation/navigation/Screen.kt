@@ -10,4 +10,5 @@ sealed class Screen(val route: String) {
     object Kanban : Screen("kanban")
     object ProjectList : Screen("project_list")
     object Insights : Screen("insights")
+    object Search : Screen("search")
 }

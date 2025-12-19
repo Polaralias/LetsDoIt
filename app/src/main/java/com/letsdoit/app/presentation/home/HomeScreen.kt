@@ -15,9 +15,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,6 +53,7 @@ fun HomeScreen(
     onKanbanClick: () -> Unit,
     onProjectListClick: () -> Unit,
     onInsightsClick: () -> Unit,
+    onSearchClick: () -> Unit,
     onSuggestionClick: (String) -> Unit // New callback for suggestions
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -66,12 +68,15 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
+                    }
                     IconButton(onClick = onInsightsClick) {
                         Icon(Icons.Default.Info, contentDescription = "Insights")
                     }
                     IconButton(onClick = onKanbanClick) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.List,
+                            imageVector = Icons.AutoMirrored.Filled.List,
                             contentDescription = "Kanban"
                         )
                     }

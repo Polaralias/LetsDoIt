@@ -11,4 +11,5 @@ interface TaskRepository {
     suspend fun refreshTasks(listId: String)
     suspend fun refreshTask(taskId: String)
     suspend fun syncUnsyncedTasks()
+    fun searchTasks(query: String): Flow<List<Task>>
 }
