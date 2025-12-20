@@ -1,0 +1,33 @@
+package com.polaralias.letsdoit.domain.usecase.task
+
+import com.polaralias.letsdoit.domain.model.Task
+import com.polaralias.letsdoit.domain.repository.TaskRepository
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class GetTasksUseCaseTest {
+
+    private val repository = mockk<TaskRepository>()
+    private val getTasksUseCase = GetTasksUseCase(repository)
+
+    @Test
+    fun `invoke returns flow from repository`() = runTest {
+        val tasks = listOf(
+            Task("1", "list1", "Title 1", null, "open", null, 1, java.time.LocalDateTime.now(), true),
+            Task("2", "list1", "Title 2", null, "open", null, 1, java.time.LocalDateTime.now(), true)
+        )
+        every { repository.getTasksFlow(null) } returns flowOf(tasks)
+
+        val result = getTasksUseCase().toList()
+
+        assertEquals(1, result.size)
+        assertEquals(tasks, result[0])
+        verify { repository.getTasksFlow(null) }
+    }
+}

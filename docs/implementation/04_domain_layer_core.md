@@ -51,7 +51,7 @@ Establish the business logic core of the application, independent of the UI and 
 > *   Bind `TaskRepositoryImpl` to `TaskRepository`.
 
 ### 7. Verification
-> Create unit tests for Use Cases in `test/java/com/letsdoit/app/domain/usecase/`:
+> Create unit tests for Use Cases in `test/java/com.polaralias.letsdoit/domain/usecase/`:
 > *   Mock `TaskRepository`.
 > *   Test `GetTasksUseCase` filtering logic.
 > *   Test `CreateTaskUseCase` validation logic.

@@ -42,7 +42,7 @@ Establish a secure and efficient connection to the ClickUp API, enabling data fe
 > *   Provide `ClickUpApi` service.
 
 ### 6. Verification
-> Create a unit test `test/java/com/letsdoit/app/data/remote/ClickUpApiTest.kt` (using MockWebServer):
+> Create a unit test `test/java/com.polaralias.letsdoit/data/remote/ClickUpApiTest.kt` (using MockWebServer):
 > *   Mock a JSON response for `getTask`.
 > *   Call the API method.
 > *   Verify the DTO is parsed correctly.

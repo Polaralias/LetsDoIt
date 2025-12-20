@@ -1,0 +1,70 @@
+package com.polaralias.letsdoit.data.mapper
+
+import com.polaralias.letsdoit.data.local.entity.TaskEntity
+import com.polaralias.letsdoit.data.remote.dto.ClickUpTaskDto
+import com.polaralias.letsdoit.domain.model.Task
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+
+fun Long.toLocalDateTime(): LocalDateTime {
+    return LocalDateTime.ofInstant(Instant.ofEpochMilli(this), ZoneId.systemDefault())
+}
+
+fun LocalDateTime.toEpochMilli(): Long {
+    return this.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+}
+
+fun TaskEntity.toDomain(): Task {
+    return Task(
+        id = id,
+        listId = listId,
+        title = title,
+        description = description,
+        status = status,
+        dueDate = dueDate?.toLocalDateTime(),
+        priority = priority,
+        createdAt = createdAt.toLocalDateTime(),
+        isSynced = isSynced,
+        calendarEventId = calendarEventId,
+        recurrenceRule = recurrenceRule
+    )
+}
+
+fun Task.toEntity(): TaskEntity {
+    return TaskEntity(
+        id = id,
+        listId = listId,
+        title = title,
+        description = description,
+        status = status,
+        dueDate = dueDate?.toEpochMilli(),
+        priority = priority,
+        createdAt = createdAt.toEpochMilli(),
+        updatedAt = System.currentTimeMillis(),
+        isSynced = isSynced,
+        calendarEventId = calendarEventId,
+        recurrenceRule = recurrenceRule
+    )
+}
+
+fun ClickUpTaskDto.toEntity(listId: String): TaskEntity {
+    val dueDateLong = try {
+        dueDate?.toLong()
+    } catch (e: Exception) {
+        null
+    }
+
+    return TaskEntity(
+        id = id,
+        listId = listId,
+        title = name,
+        description = textContent,
+        status = status.status,
+        dueDate = dueDateLong,
+        priority = priority?.id?.toIntOrNull() ?: 0,
+        createdAt = dateCreated.toLongOrNull() ?: System.currentTimeMillis(),
+        updatedAt = dateUpdated.toLongOrNull() ?: System.currentTimeMillis(),
+        isSynced = true
+    )
+}

@@ -10,7 +10,7 @@ Initialize a new Android project with Jetpack Compose, Hilt, Room, and Retrofit,
 ### 1. Initialize Project
 > Create a new Android project using Android Studio.
 > *   **App Name**: Lets Do It
-> *   **Package Name**: `com.letsdoit.app`
+> *   **Package Name**: `com.polaralias.letsdoit`
 > *   **Minimum SDK**: API 26 (Android 8.0)
 > *   **Language**: Kotlin
 > *   **Build Configuration Language**: Kotlin DSL (build.gradle.kts)
@@ -37,7 +37,7 @@ Initialize a new Android project with Jetpack Compose, Hilt, Room, and Retrofit,
 > *   Enable Java 17 or 1.8 compatibility as needed by the Kotlin version.
 
 ### 4. Setup Project Structure (Package Layout)
-> Create the following package structure in `app/src/main/java/com/letsdoit/app/`:
+> Create the following package structure in `app/src/main/java/com.polaralias.letsdoit/`:
 > *   `core`
 >     *   `di` (Dependency Injection modules)
 >     *   `util` (Utility classes)

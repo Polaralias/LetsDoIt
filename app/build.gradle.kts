@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.letsdoit.app"
+    namespace = "com.polaralias.letsdoit"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.letsdoit.app"
+        applicationId = "com.polaralias.letsdoit"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
