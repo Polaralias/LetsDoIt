@@ -76,7 +76,7 @@ Implement the persistent local storage for Tasks, Lists, Folders, and Spaces usi
 > *   Provide each Dao (SpaceDao, FolderDao, ListDao, TaskDao) from the database instance.
 
 ### 6. Verification
-> Write an instrumentation test in `androidTest/java/com/letsdoit/app/data/local/TaskDaoTest.kt`:
+> Write an instrumentation test in `androidTest/java/com.polaralias.letsdoit/data/local/TaskDaoTest.kt`:
 > *   Initialize an in-memory Room database.
 > *   Insert a Task.
 > *   Retrieve the Task and verify its properties match.
