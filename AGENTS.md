@@ -60,8 +60,9 @@ Before producing work, the agent should fully understand the referenced skill do
     *   Hybrid Agenda View (Tasks + Events).
     *   Calendar Permission Handling.
     *   Presentation Layer Implementation.
+    *   Unit Tests (UseCase & ViewModel).
 
 ### Pending / Next Steps
 *   **Release Candidate Preparation**: Prepare signed build. (Completed)
 *   **Store Listing**: Prepare assets and descriptions. (Completed)
-*   **Phase 7**: Implement Calendar View (In Progress).
+*   **Phase 7**: Implement Calendar View (Completed).
