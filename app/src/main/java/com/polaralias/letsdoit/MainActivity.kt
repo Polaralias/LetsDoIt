@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.polaralias.letsdoit.presentation.calendar.CalendarScreen
 import com.polaralias.letsdoit.presentation.home.HomeScreen
 import com.polaralias.letsdoit.presentation.insights.InsightsScreen
 import com.polaralias.letsdoit.presentation.kanban.KanbanScreen
@@ -71,6 +72,9 @@ class MainActivity : ComponentActivity() {
                                 onSearchClick = {
                                     navController.navigate(Screen.Search.route)
                                 },
+                                onCalendarClick = {
+                                    navController.navigate(Screen.Calendar.route)
+                                },
                                 onSuggestionClick = { title ->
                                     // Navigate to create new task with pre-filled title
                                     // We need to pass the title to TaskDetailScreen
@@ -123,6 +127,13 @@ class MainActivity : ComponentActivity() {
                                 onBackClick = {
                                     navController.popBackStack()
                                 },
+                                onTaskClick = { taskId ->
+                                    navController.navigate(Screen.TaskDetails.createRoute(taskId))
+                                }
+                            )
+                        }
+                        composable(Screen.Calendar.route) {
+                            CalendarScreen(
                                 onTaskClick = { taskId ->
                                     navController.navigate(Screen.TaskDetails.createRoute(taskId))
                                 }

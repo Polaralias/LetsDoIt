@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
@@ -54,6 +55,7 @@ fun HomeScreen(
     onProjectListClick: () -> Unit,
     onInsightsClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onCalendarClick: () -> Unit,
     onSuggestionClick: (String) -> Unit // New callback for suggestions
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -73,6 +75,9 @@ fun HomeScreen(
                     }
                     IconButton(onClick = onInsightsClick) {
                         Icon(Icons.Default.Info, contentDescription = "Insights")
+                    }
+                    IconButton(onClick = onCalendarClick) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Calendar")
                     }
                     IconButton(onClick = onKanbanClick) {
                         Icon(
