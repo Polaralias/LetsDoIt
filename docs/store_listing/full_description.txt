@@ -1,0 +1,14 @@
+Lets Do It is a powerful yet simple task management application designed to help you organize your life and work.
+
+Key Features:
+- **Task Management**: Create, edit, and organize tasks effortlessly.
+- **Smart NLP Input**: Simply type "Buy milk tomorrow at 10am" and the app automatically sets the due date and time.
+- **Kanban Board**: Visualize your workflow with an intuitive drag-and-drop board (To Do, In Progress, Done).
+- **Calendar Integration**: Seamlessly sync your tasks with your Android calendar.
+- **Recurring Tasks**: Set up repeating tasks for daily or weekly routines.
+- **Customizable Themes**: Choose from a variety of color themes and dark/light modes to suit your style.
+- **Insights & Statistics**: Track your productivity with visual charts and statistics.
+- **Background Sync**: Keep your tasks updated across devices (requires backend configuration).
+- **Search & Filter**: Quickly find tasks using smart search and filters.
+
+Stay organized and get things done with Lets Do It!
