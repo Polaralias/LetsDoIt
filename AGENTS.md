@@ -58,5 +58,5 @@ Before producing work, the agent should fully understand the referenced skill do
     *   Full feature verification.
 
 ### Pending / Next Steps
-*   **Release Candidate Preparation**: Prepare signed build.
-*   **Store Listing**: Prepare assets and descriptions.
+*   **Release Candidate Preparation**: Prepare signed build. (Completed)
+*   **Store Listing**: Prepare assets and descriptions. (Completed)
