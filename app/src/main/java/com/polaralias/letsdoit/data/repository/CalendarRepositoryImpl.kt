@@ -7,6 +7,7 @@ import android.provider.CalendarContract
 import android.util.Log
 import com.polaralias.letsdoit.data.mapper.toEpochMilli
 import com.polaralias.letsdoit.domain.model.CalendarAccount
+import com.polaralias.letsdoit.domain.model.CalendarEvent
 import com.polaralias.letsdoit.domain.model.Task
 import com.polaralias.letsdoit.domain.repository.CalendarRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -55,6 +56,55 @@ class CalendarRepositoryImpl @Inject constructor(
             Log.e(TAG, "Error getting calendars", e)
         }
         return@withContext calendars
+    }
+
+    override suspend fun getEvents(start: Long, end: Long): List<CalendarEvent> = withContext(Dispatchers.IO) {
+        val events = mutableListOf<CalendarEvent>()
+        val uri = CalendarContract.Instances.CONTENT_URI.buildUpon()
+            .appendPath(start.toString())
+            .appendPath(end.toString())
+            .build()
+
+        val projection = arrayOf(
+            CalendarContract.Instances.EVENT_ID,
+            CalendarContract.Instances.TITLE,
+            CalendarContract.Instances.DESCRIPTION,
+            CalendarContract.Instances.BEGIN,
+            CalendarContract.Instances.END,
+            CalendarContract.Instances.DISPLAY_COLOR,
+            CalendarContract.Instances.ALL_DAY
+        )
+
+        try {
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                val idIndex = cursor.getColumnIndex(CalendarContract.Instances.EVENT_ID)
+                val titleIndex = cursor.getColumnIndex(CalendarContract.Instances.TITLE)
+                val descIndex = cursor.getColumnIndex(CalendarContract.Instances.DESCRIPTION)
+                val beginIndex = cursor.getColumnIndex(CalendarContract.Instances.BEGIN)
+                val endIndex = cursor.getColumnIndex(CalendarContract.Instances.END)
+                val colorIndex = cursor.getColumnIndex(CalendarContract.Instances.DISPLAY_COLOR)
+                val allDayIndex = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY)
+
+                while (cursor.moveToNext()) {
+                    events.add(
+                        CalendarEvent(
+                            id = cursor.getLong(idIndex),
+                            title = cursor.getString(titleIndex) ?: "No Title",
+                            description = cursor.getString(descIndex),
+                            start = cursor.getLong(beginIndex),
+                            end = cursor.getLong(endIndex),
+                            color = cursor.getInt(colorIndex),
+                            allDay = cursor.getInt(allDayIndex) == 1
+                        )
+                    )
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission missing for getEvents", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting events", e)
+        }
+        return@withContext events
     }
 
     override suspend fun addEvent(task: Task, calendarId: Long): Long? = withContext(Dispatchers.IO) {

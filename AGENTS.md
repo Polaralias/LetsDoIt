@@ -56,7 +56,12 @@ Before producing work, the agent should fully understand the referenced skill do
     *   UI modernization (deprecated API replacements).
     *   Robust error handling (Calendar logging).
     *   Full feature verification.
+*   **Phase 7 (Calendar View)**:
+    *   Hybrid Agenda View (Tasks + Events).
+    *   Calendar Permission Handling.
+    *   Presentation Layer Implementation.
 
 ### Pending / Next Steps
 *   **Release Candidate Preparation**: Prepare signed build. (Completed)
 *   **Store Listing**: Prepare assets and descriptions. (Completed)
+*   **Phase 7**: Implement Calendar View (In Progress).
