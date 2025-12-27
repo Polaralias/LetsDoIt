@@ -1,12 +1,13 @@
 name: Build Debug APK
 
 on:
-  pull_request:
-    types: [closed]
+  workflow_dispatch:
+  push:
+    branches:
+      - "**"
 
 jobs:
   build:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -28,10 +29,12 @@ jobs:
     - name: Build Debug APK
       run: |
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew buildDebugApk
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: |
+          dist/apk/*.apk
+          app/build/outputs/apk/debug/*.apk
